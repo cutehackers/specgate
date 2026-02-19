@@ -1,58 +1,56 @@
 # SpecGate
 
 SpecGate is a lightweight workflow pack for Spec-driven Development (SDD).
-It provides ready-to-use command surfaces and scripts for Claude, OpenCode, and Codex.
+It provides command surfaces and scripts for Claude, OpenCode, and Codex.
 
-This repository is designed for **direct installation** into your project without cloning.
+Install directly into your project without cloning.
 
-- Default install path: current project root (`.`)
+- Default install path: current directory (`.`)
 - Default scope: all agents (`claude`, `codex`, `opencode`)
-- Command entry points: `/feature-set`, `/specify`, `/clarify`, `/code`, `/test-spec`, `/test-write`, `/feature-done`
+- Entry points: `/feature-set`, `/specify`, `/clarify`, `/code`, `/test-spec`, `/test-write`, `/feature-done`
 
 ## 1) Quick start
 
-Install SpecGate in one command:
+Install SpecGate:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh \
-  | bash -s -- --prefix .
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
+bash /tmp/specgate-install.sh --prefix .
 ```
 
-Verify installation:
+Verify:
 
 ```bash
 ls -la .specify .claude .codex .opencode
 ```
 
-At this point, you should see the folders relevant to your selected agents.
+You should see the folders for your selected agents.
 
-## 2) Install target and command (remote)
+## 2) Install modes
 
-Run these from your project root.
-
-### Install all agents (default)
+### Remote install (all agents, default)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh \
-  | bash -s -- --prefix .
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
+bash /tmp/specgate-install.sh --prefix .
 ```
 
-### Install specific agents
+### Install selected agents
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh \
-  | bash -s -- --ai claude --prefix .
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
+bash /tmp/specgate-install.sh --ai claude --prefix .
 ```
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh \
-  | bash -s -- --ai claude,opencode --prefix .
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
+bash /tmp/specgate-install.sh --ai claude,opencode --prefix .
 ```
 
-`--ai` and `--agent` are the same option.  
+`--ai` and `--agent` are aliases.
 Supported values: `all`, `claude`, `codex`, `opencode`.
 
-### Install from a local clone
+### Install from local clone
 
 ```bash
 /path/to/specgate/install.sh --prefix .
@@ -61,42 +59,42 @@ Supported values: `all`, `claude`, `codex`, `opencode`.
 ## 3) Install options
 
 ```text
---prefix <path>     Target directory (default: .)
---dry-run           Print plan only, no files are written
+--prefix <path>     Install target directory (default: .)
+--dry-run           Show plan only; no files are changed
 --force             Overwrite existing target files/directories
 --version <name>    Install from branch/tag (default: main)
---ai <list>         Install target agent scope
---agent <list>      Alias of --ai
+--ai <list>         Install scope
+--agent <list>      Alias for --ai
 --uninstall         Remove SpecGate assets instead of installing
 ```
 
-Examples:
+### Examples
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh \
-  | bash -s -- --dry-run --ai codex --prefix .
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
+bash /tmp/specgate-install.sh --dry-run --ai codex --prefix .
 ```
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh \
-  | bash -s -- --version v0.0.0 --prefix .
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
+bash /tmp/specgate-install.sh --version v0.0.0 --prefix .
 ```
 
 ## 4) Uninstall
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh \
-  | bash -s -- --uninstall --prefix .
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
+bash /tmp/specgate-install.sh --uninstall --prefix .
 ```
 
-Uninstall specific agents:
+Remove only one agent:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh \
-  | bash -s -- --uninstall --ai claude --prefix .
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
+bash /tmp/specgate-install.sh --uninstall --ai claude --prefix .
 ```
 
-## 5) What gets installed
+## 5) Installed assets
 
 - `.specify/*`
 - `.claude/commands/specgate/*`
@@ -105,9 +103,9 @@ curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.s
 - `.opencode/command/*`
 - `docs/SPECGATE.md`
 
-## 6) Optional checks
+## 6) Optional smoke checks
 
-From repo root:
+Run from repository root:
 
 ```bash
 bash -n .specify/scripts/bash/check-code-prerequisites.sh \
@@ -125,7 +123,7 @@ bash -n .specify/scripts/bash/check-code-prerequisites.sh \
 ./.specify/scripts/bash/specgate-smoke-check.sh
 ```
 
-`docs/SPECGATE.md` contains detailed operating guidance.
+For detailed operation guidance, see `docs/SPECGATE.md`.
 
 ## Korean version
 
