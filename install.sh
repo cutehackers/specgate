@@ -17,6 +17,25 @@ VERSION="main"
 REPO_URL="${REPO_URL:-https://github.com/cutehackers/specgate}"
 SCRIPT_SOURCE_DIR=""
 TMP_DIR=""
+AGENT_SELECTION="all"
+
+KNOWN_AGENTS=(claude codex opencode)
+COMMON_ASSETS=(
+  ".specify"
+  "docs/SPECGATE.md"
+)
+CLAUDE_ASSETS=(
+  ".claude/commands/specgate"
+  ".claude/hooks/statusline.js"
+)
+CODEX_ASSETS=(
+  ".codex/commands/specgate"
+)
+OPENCODE_ASSETS=(
+  ".opencode/command"
+)
+ASSETS=()
+SELECTED_AGENTS=()
 
 print_usage() {
   cat <<'USAGE'
@@ -29,6 +48,8 @@ Options:
   --dry-run          Show planned file operations without writing files
   --force            Overwrite existing files/directories
   --version <name>    Ref to install when downloading (default: main)
+  --ai <list>        Agents to install (comma-separated). Supported: all, claude, codex, opencode
+  --agent <list>     Alias for --ai
   -h, --help         Show this help
 USAGE
 }
@@ -57,6 +78,15 @@ case "$1" in
       VERSION="${2:-}"
       shift 2
       ;;
+    --ai|--agent)
+      if [[ $# -lt 2 || -z "${2:-}" ]]; then
+        echo "Missing value for $1"
+        print_usage
+        exit 1
+      fi
+      AGENT_SELECTION="${2:-}"
+      shift 2
+      ;;
     --force)
       FORCE=1
       shift
@@ -73,14 +103,85 @@ case "$1" in
   esac
 done
 
+normalize_ai_selection() {
+  local input="${1:-}"
+  local -a requested=()
+  local normalized=""
+  local target
+
+  if [[ -z "${input//[[:space:]]/}" ]]; then
+    input="all"
+  fi
+
+  IFS=',' read -r -a requested <<< "$input"
+
+  for target in "${requested[@]}"; do
+    target="${target//[[:space:]]/}"
+
+    case "$target" in
+      "")
+        continue
+        ;;
+      all)
+        echo "claude codex opencode"
+        return 0
+        ;;
+      claude|codex|opencode)
+        if [[ " $normalized " != *" $target "* ]]; then
+          if [[ -n "$normalized" ]]; then
+            normalized="$normalized $target"
+          else
+            normalized="$target"
+          fi
+        fi
+        ;;
+      *)
+        echo "Unsupported --ai/--agent value: $target" >&2
+        echo "Supported values: all, claude, codex, opencode" >&2
+        exit 1
+        ;;
+    esac
+  done
+
+  if [[ -z "$normalized" ]]; then
+    normalized="claude codex opencode"
+  fi
+
+  printf '%s ' "$normalized"
+}
+
+build_assets() {
+  local -a selected=("$@")
+  ASSETS=("${COMMON_ASSETS[@]}")
+
+  local agent
+  for agent in "${selected[@]}"; do
+    case "$agent" in
+      claude)
+        ASSETS+=("${CLAUDE_ASSETS[@]}")
+        ;;
+      codex)
+        ASSETS+=("${CODEX_ASSETS[@]}")
+        ;;
+      opencode)
+        ASSETS+=("${OPENCODE_ASSETS[@]}")
+        ;;
+    esac
+  done
+}
+
 has_local_assets() {
   local base_dir="$1"
-  [[ -d "$base_dir/.specify" ]] && \
-    [[ -e "$base_dir/.claude/commands/specgate" ]] && \
-    [[ -e "$base_dir/.codex/commands/specgate" ]] && \
-    [[ -e "$base_dir/.opencode/command" ]] && \
-    [[ -e "$base_dir/.claude/hooks/statusline.js" ]] && \
-    [[ -e "$base_dir/docs/SPECGATE.md" ]]
+  local rel_path
+  shift
+
+  for rel_path in "$@"; do
+    if [[ ! -e "$base_dir/$rel_path" ]]; then
+      return 1
+    fi
+  done
+
+  return 0
 }
 
 cleanup_tmp() {
@@ -106,8 +207,18 @@ resolve_remote_archive() {
   return 1
 }
 
+normalize_output="$(normalize_ai_selection "$AGENT_SELECTION")"
+read -r -a SELECTED_AGENTS <<< "$normalize_output"
+build_assets "${SELECTED_AGENTS[@]}"
+
+if [[ "${#SELECTED_AGENTS[@]}" -eq "${#KNOWN_AGENTS[@]}" ]]; then
+  SELECTED_AGENTS_LABEL="all"
+else
+  SELECTED_AGENTS_LABEL="${SELECTED_AGENTS[*]}"
+fi
+
 resolve_script_source() {
-  if [[ -n "${SCRIPT_DIR}" ]] && has_local_assets "${SCRIPT_DIR}"; then
+  if [[ -n "${SCRIPT_DIR}" ]] && has_local_assets "${SCRIPT_DIR}" "${ASSETS[@]}"; then
     echo "${SCRIPT_DIR}"
     return 0
   fi
@@ -133,7 +244,7 @@ resolve_script_source() {
     exit 1
   fi
 
-  if ! has_local_assets "${extracted_dir}"; then
+  if ! has_local_assets "${extracted_dir}" "${ASSETS[@]}"; then
     echo "Downloaded archive does not contain expected SpecGate payload." >&2
     exit 1
   fi
@@ -145,15 +256,6 @@ SCRIPT_SOURCE_DIR="$(resolve_script_source)"
 
 mkdir -p "$PREFIX"
 TARGET_DIR="$(cd "$PREFIX" && pwd)"
-
-ASSETS=(
-  ".specify"
-  ".claude/commands/specgate"
-  ".claude/hooks/statusline.js"
-  ".opencode/command"
-  ".codex/commands/specgate"
-  "docs/SPECGATE.md"
-)
 
 copy_item() {
   local rel_path="$1"
@@ -192,6 +294,7 @@ copy_item() {
 }
 
 echo "Installing SpecGate into $TARGET_DIR"
+echo "Target agents: ${SELECTED_AGENTS_LABEL}"
 for asset in "${ASSETS[@]}"; do
   copy_item "$asset"
 done

@@ -26,6 +26,20 @@ curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.s
   | bash -s -- --version v0.0.0 --prefix .
 ```
 
+Install for a specific agent surface:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh \
+  | bash -s -- --ai claude --prefix .
+```
+
+Install for multiple agents:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh \
+  | bash -s -- --ai claude,opencode --prefix .
+```
+
 Or install from a local clone:
 
 From the project root that will use SpecGate:
@@ -51,6 +65,7 @@ The installer creates/overwrites:
 - `--dry-run`: show planned file operations without changing files
 - `--force`: overwrite existing target files (default keeps existing files and skips)
 - `--version`: branch or tag for remote bootstrap (default: `main`)
+- `--ai` / `--agent`: install scope, comma-separated values from `all`, `claude`, `codex`, `opencode`
 
 ## Required smoke checks
 
