@@ -14,7 +14,7 @@
 
 - 실행면에서 단일 네임스페이스: `SpecGate`
 - 명령면에서 단일 흐름: `.claude/commands/specgate/*`, `.opencode/command/*`, `.codex/commands/specgate/*`
-- 상태 추적: `specs/feature-stage.local.json`
+- 상태 추적: `specs/feature-stage.local.json` (초기 설치본은 미포함, 흐름 시작 시 생성/갱신됩니다)
 - 진실원천: 구현 큐는 `code.md#code-tasks`, 테스트 큐는 `test-spec.md#test-code`
 
 ## 30초 빠른 시작
@@ -70,7 +70,7 @@
 
 ## 포인터 동작 방식
 
-포인터 파일: `specs/feature-stage.local.json`
+포인터 파일: `specs/feature-stage.local.json`(초기 설치본은 미포함, `/feature-set` 실행 시 초기 생성됨)
 
 ```json
 {
@@ -189,7 +189,7 @@ Flat 명령형(짧은 명령)으로 통일합니다.
 
 ## 포인터 FSM(자동 동기화)
 
-포인터 파일: `specs/feature-stage.local.json`
+포인터 파일: `specs/feature-stage.local.json`(초기 설치본은 미포함, `/feature-set` 실행 시 초기 생성됨)
 
 ```json
 {
@@ -263,9 +263,5 @@ Flat 명령형(짧은 명령)으로 통일합니다.
 
 ## 별도 저장소 분리(확장 계획 요약)
 
-상세한 분리 계획은 `docs/SPECGATE-EXTERNALIZATION-PLAN.md` 참조.
-
-요약:
-- SpecGate 코어를 프로젝트 코드와 분리한 별도 엔진 저장소로 이동
-- 설치 스크립트/버전 관리/템플릿 배포 채널을 별도로 운영
-- 기존 프로젝트는 엔진을 **초기 설치 + 업그레이드**만 수행
+해당 분리 계획 문서는 설치형 레포에서는 제거되었으며, 설치 패키지는
+`install.sh`와 설치 아티팩트만으로 운영됩니다.

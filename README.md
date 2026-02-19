@@ -1,16 +1,32 @@
-# SpecGate Engine
+# SpecGate
 
-Standalone SpecGate workflow engine repository.
+Standalone SpecGate workflow repository.
 
 This repository contains only the shared SpecGate command surface, templates,
 and scripts used by
 Claude / OpenCode / Codex for SDD phase flow.
 
 - `spec.md -> clarify.md(optional) -> code.md -> test-spec.md`
-- Pointer FSM in `specs/feature-stage.local.json`
+- Pointer FSM is stored in `specs/feature-stage.local.json`.
+  The file is generated when starting a feature flow and is not part of the initial install payload.
 - Flat invocation style (`/feature-set`, `/specify`, `/clarify`, `/code`, `/test-spec`, `/test-write`, `/feature-done`)
 
 ## Installation in a consumer project
+
+Install directly from the repository without cloning:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh | bash -s -- --prefix .
+```
+
+Pin to a branch/tag by adding `--version`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh \
+  | bash -s -- --version v0.0.0 --prefix .
+```
+
+Or install from a local clone:
 
 From the project root that will use SpecGate:
 
@@ -34,22 +50,7 @@ The installer creates/overwrites:
 
 - `--dry-run`: show planned file operations without changing files
 - `--force`: overwrite existing target files (default keeps existing files and skips)
-
-## Upgrade a consumer install
-
-From inside this repo:
-
-```bash
-/path/to/specgate/sync.sh --check
-/path/to/specgate/sync.sh --apply
-```
-
-You can pass `--install-prefix <path>` with `--apply` to automatically run installer
-into a consumer directory after the engine has been updated.
-
-```bash
-/path/to/specgate/sync.sh --apply --install-prefix /abs/path/to/consumer
-```
+- `--version`: branch or tag for remote bootstrap (default: `main`)
 
 ## Required smoke checks
 

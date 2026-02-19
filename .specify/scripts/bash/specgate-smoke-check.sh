@@ -74,14 +74,16 @@ required_files=(
     ".specify/scripts/bash/setup-test-spec.sh"
     ".claude/hooks/statusline.js"
     "docs/SPECGATE.md"
-    "specs/feature-stage.local.json"
 )
 
 for file in "${required_files[@]}"; do
     check_file_exists "$file"
 done
 
-if python3 - <<'PY' "$REPO_ROOT/specs/feature-stage.local.json" "$REPO_ROOT" >"$TMP_OUTPUT" 2>&1
+POINTER_FILE="$REPO_ROOT/specs/feature-stage.local.json"
+
+if [[ -f "$POINTER_FILE" ]]; then
+if python3 - <<'PY' "$POINTER_FILE" "$REPO_ROOT" >"$TMP_OUTPUT" 2>&1
 import json
 import sys
 from pathlib import Path
@@ -181,6 +183,9 @@ then
 else
     fail "active pointer feature docs integrity check failed"
     cat "$TMP_OUTPUT" >&2
+fi
+else
+    pass "active pointer file intentionally omitted in fresh install (specs/feature-stage.local.json)"
 fi
 
 legacy_paths=(
