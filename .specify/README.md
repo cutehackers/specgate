@@ -27,7 +27,7 @@ OpenCode for `SpecGate`.
 ## Environment Notes
 
 - `check-implementation-readiness.sh` validates implementation queue readiness (`code.md#code-tasks`)
-  and emits blocking-task diagnostics for `/code` → `/test-spec` transitions.
+  and emits blocking-task diagnostics for `/codify` → `/test-specify` transitions.
 - `check-implementation-quality.sh` runs `dart format`, `flutter analyze`, and
   `flutter test`. If Flutter cache path is not writable
   (`.../bin/cache/engine.stamp`), add `--allow-tool-fallback` to continue

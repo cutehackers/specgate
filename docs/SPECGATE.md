@@ -3,7 +3,7 @@
 SpecGate is the Spec-driven Development (SDD) workflow used by Claude, OpenCode, and Codex.
 It helps you move through one clear flow:
 
-`spec.md -> clarify.md(optional) -> code.md -> test-spec.md -> test-write -> feature-done`
+`spec.md -> clarify.md(optional) -> code.md -> test-spec.md -> test-codify -> feature-done`
 
 This repository is the installation package only; after installation, work is done inside your project.
 
@@ -29,9 +29,9 @@ Then start using commands from your agent:
 - `/feature-set`
 - `/specify`
 - `/clarify` (optional)
-- `/code`
-- `/test-spec`
-- `/test-write`
+- `/codify`
+- `/test-specify`
+- `/test-codify`
 - `/feature-done`
 
 ---
@@ -55,17 +55,17 @@ It is created when you run `/feature-set`.
 1. Run `/feature-set <feature-folder-path>`
 2. Run `/specify`
 3. Run `/clarify` (if needed)
-4. Run `/code`
-5. Run `/test-spec`
-6. Run `/test-write`
+4. Run `/codify`
+5. Run `/test-specify`
+6. Run `/test-codify`
 7. Run `/feature-done`
 
 ### Where each command should end
 
 - `spec.md` and checklist sections from `/specify` should be complete for that feature.
-- `/code` must include P1 items and all `[P2][BLOCKING]` items.
-- `/test-spec` creates a single test execution queue in `test-spec.md`.
-- `/test-write` should consume that queue.
+- `/codify` must include P1 items and all `[P2][BLOCKING]` items.
+- `/test-specify` creates a single test execution queue in `test-spec.md`.
+- `/test-codify` should consume that queue.
 - `/feature-done` should end after cleanup and validation.
 
 If a step fails:

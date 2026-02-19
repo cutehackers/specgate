@@ -45,7 +45,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Validate that `<feature_dir>/docs/code.md` exists before proceeding:
      - If not found, fail with:
        - `ERROR: code.md required for /taskstoissues`
-       - `Run /code first to create implementation tasks before creating issues.`
+       - `Run /codify first to create implementation tasks before creating issues.`
      - For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
    - After successful completion, run:
      ```bash
@@ -60,7 +60,7 @@ You **MUST** consider the user input before proceeding (if not empty).
       - Issue creation targets unchecked actionable items only.
       - Ignore `OBSOLETE:` items.
       - Priority tags in `code.md` are informative only here; this command never
-        changes `/code` readiness or phase gates.
+        changes `/codify` readiness or phase gates.
    1. Get the Git remote by running:
 
    ```bash
@@ -83,11 +83,11 @@ Task source:
 - Parse `code.md` `## code-tasks` and target only unchecked tasks with task id prefix `C###`.
 - Keep the existing `P1/P2/P3` and `[P2][BLOCKING]` metadata:
   - `P1`: required baseline implementation tasks.
-  - `P2-BLOCKING`: release-quality blockers; they block `/code -> /test-spec` transitions in the workflow.
+  - `P2-BLOCKING`: release-quality blockers; they block `/codify -> /test-specify` transitions in the workflow.
   - Other `P2`: non-blocking quality tasks, optional for immediate test/spec planning.
   - `P3`: optional polish/improvement tasks.
 - This command only maps metadata into issues for human planning/triage. It does **not** enforce
-  `/code` completion rules or modify workflow transitions.
+  `/codify` completion rules or modify workflow transitions.
 - Skip tasks marked `OBSOLETE:` or duplicated by id/title in this run.
 
 Issue creation rules:

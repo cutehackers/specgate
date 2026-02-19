@@ -40,7 +40,7 @@
 
 ## test-code
 
-> This section is the single execution source for `/test-write`.
+> This section is the single execution source for `/test-codify`.
 
 ### Phase 0: Infrastructure
 

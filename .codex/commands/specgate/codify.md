@@ -21,8 +21,8 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 ## Outline
 
-`/code` is the authoritative workflow for planning artifacts.
-Default execution flow: `/specify` -> `/clarify` -> `/code` -> `/test-spec`.
+`/codify` is the authoritative workflow for planning artifacts.
+Default execution flow: `/specify` -> `/clarify` -> `/codify` -> `/test-specify`.
 
 1. **Setup**:
    - Resolve `feature-dir` with this priority:
@@ -82,7 +82,7 @@ Default execution flow: `/specify` -> `/clarify` -> `/code` -> `/test-spec`.
      - `## Clarifications`
    - If any required section is missing or empty:
      - **STOP** and report missing section names.
-     - Instruct user to run `/specify` or `/clarify` to fix spec completeness before `/code`.
+     - Instruct user to run `/specify` or `/clarify` to fix spec completeness before `/codify`.
 
 3. **Execute code workflow**: Follow the structure in CODE_DOC template to:
    - Fill Technical Context (mark unknowns as "NEEDS CLARIFICATION")
@@ -214,9 +214,9 @@ Default execution flow: `/specify` -> `/clarify` -> `/code` -> `/test-spec`.
 
 ### Priority policy (P1/P2/P3)
 
-- `P1`: Must-have for baseline acceptance. Required before `/code` can transition to `/test-spec`.
+- `P1`: Must-have for baseline acceptance. Required before `/codify` can transition to `/test-specify`.
   - `P2`: Required for release quality and major flow coverage.
-  - `P2-BLOCKING` tasks must be completed to move from `/code` to `/test-spec`.
+  - `P2-BLOCKING` tasks must be completed to move from `/codify` to `/test-specify`.
   - Non-blocking `P2` can remain pending when capacity/risk trade-off requires.
 - `P3`: Optional polish/improvement tasks. Track only when capacity allows or explicitly requested by the user.
 - `P2-BLOCKING` tag is required for blocking `P2` tasks.
@@ -268,7 +268,7 @@ Default execution flow: `/specify` -> `/clarify` -> `/code` -> `/test-spec`.
 
 - Use absolute paths
 - ERROR on gate failures or unresolved clarifications
-- `screen_abstraction.md` is required output for `/code`
+- `screen_abstraction.md` is required output for `/codify`
 - `screen_abstraction.md` defines WHAT each screen contract guarantees
 - `quickstart.md` defines HOW to validate those contracts end-to-end
 - `quickstart.md` must reference screen IDs and must not duplicate full abstraction schema blocks

@@ -351,7 +351,7 @@ Spec-driven delivery in this repository MUST follow the `SpecGate` workflow:
 
 1. **Workflow Identity & Command Model**
    - Official workflow name is `SpecGate`.
-   - Flat command UX is required: `/specify -> /clarify -> /code -> /test-spec -> /test-write`.
+   - Flat command UX is required: `/specify -> /clarify -> /codify -> /test-specify -> /test-codify`.
    - Compatibility aliases are not allowed in operational flow; use `SpecGate` only.
 
 2. **Required Feature Maintenance Artifacts**

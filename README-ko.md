@@ -7,7 +7,7 @@ Claude, OpenCode, Codex에서 사용할 수 있는 명령과 스크립트를 제
 
 - 기본 설치 경로: 현재 디렉토리(`.`)
 - 기본 설치 범위: 전체 에이전트(`claude`, `codex`, `opencode`)
-- 실행 명령: `/feature-set`, `/specify`, `/clarify`, `/code`, `/test-spec`, `/test-write`, `/feature-done`
+- 실행 명령: `/feature-set`, `/specify`, `/clarify`, `/codify`, `/test-specify`, `/test-codify`, `/feature-done`
 
 ## 1) 빠른 시작
 

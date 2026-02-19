@@ -44,6 +44,6 @@ Provide a compact findings table:
 
 Then add:
 
-- `Blocking issues` (must fix before `/test-spec`)
+- `Blocking issues` (must fix before `/test-specify`)
 - `Non-blocking improvements`
 - `Next command`

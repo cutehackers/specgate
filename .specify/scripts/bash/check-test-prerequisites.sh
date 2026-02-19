@@ -50,11 +50,11 @@ fi
 
 if [[ ! -f "$TEST_SPEC" ]]; then
     if $JSON_MODE; then
-        printf '{"ok":false,"FEATURE_DIR":"%s","FEATURE_DOCS_DIR":"%s","TEST_SPEC":"%s","errors":["test-spec.md not found. Run /test-spec first."]}\n' \
+        printf '{"ok":false,"FEATURE_DIR":"%s","FEATURE_DOCS_DIR":"%s","TEST_SPEC":"%s","errors":["test-spec.md not found. Run /test-specify first."]}\n' \
             "$FEATURE_DIR" "$FEATURE_DOCS_DIR" "$TEST_SPEC"
     else
         echo "ERROR: test-spec.md not found in $FEATURE_DOCS_DIR" >&2
-        echo "Run /test-spec first." >&2
+        echo "Run /test-specify first." >&2
     fi
     exit 1
 fi

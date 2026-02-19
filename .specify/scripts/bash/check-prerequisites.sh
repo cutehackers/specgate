@@ -79,7 +79,7 @@ fi
 
 if [[ ! -f "$CODE_DOC" ]]; then
     echo "ERROR: code.md not found in $FEATURE_DOCS_DIR" >&2
-    echo "Run /code first to create the implementation code spec." >&2
+    echo "Run /codify first to create the implementation code spec." >&2
     exit 1
 fi
 

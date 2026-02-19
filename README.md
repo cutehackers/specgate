@@ -7,7 +7,7 @@ Install directly into your project without cloning.
 
 - Default install path: current directory (`.`)
 - Default scope: all agents (`claude`, `codex`, `opencode`)
-- Entry points: `/feature-set`, `/specify`, `/clarify`, `/code`, `/test-spec`, `/test-write`, `/feature-done`
+- Entry points: `/feature-set`, `/specify`, `/clarify`, `/codify`, `/test-specify`, `/test-codify`, `/feature-done`
 
 ## 1) Quick start
 

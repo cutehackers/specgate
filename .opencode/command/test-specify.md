@@ -7,8 +7,8 @@ allowed-tools:
   - AskUserQuestion
 handoffs:
   - label: Implement Tests
-    agent: test-write
-    prompt: Execute /test-write using test-spec.md#test-code as the execution queue.
+    agent: test-codify
+    prompt: Execute /test-codify using test-spec.md#test-code as the execution queue.
     send: true
 ---
 
@@ -39,7 +39,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    - `.specify/scripts/bash/check-code-prerequisites.sh --feature-dir "<abs path>" --json`
    - `.specify/scripts/bash/check-implementation-readiness.sh --feature-dir "<abs path>" --json`
 
-   If readiness check reports `ready_for_test_spec: false`, STOP and keep `/test-spec` blocked until all blocking prerequisites are resolved.
+   If readiness check reports `ready_for_test_spec: false`, STOP and keep `/test-specify` blocked until all blocking prerequisites are resolved.
 
 5. Load context from:
    - `spec.md` (required)
@@ -62,7 +62,7 @@ You **MUST** consider the user input before proceeding (if not empty).
      --current-doc test-spec.md \
      --json
    ```
-8. Report results and route to `/test-write`.
+8. Report results and route to `/test-codify`.
 
 ## Required test-spec.md Rules
 
@@ -82,7 +82,7 @@ Every planned test target must have a row in `Test Component Inventory` with:
 
 ### 2) Execution Queue Rule
 
-- `## test-code` is the only executable task queue for `/test-write`.
+- `## test-code` is the only executable task queue for `/test-codify`.
 - Task format:
   - `- [ ] TC001 [Layer] [Action] Description with test path`
 - Actions: `NEW`, `UPDATE`, `REFACTOR`, `VERIFY`, `REGRESSION`.
@@ -105,4 +105,4 @@ Report:
 - Count of `test-code` tasks
 - Execution context summary
 - Readiness status output from `check-implementation-readiness`
-- Next command: `/test-write`
+- Next command: `/test-codify`

@@ -237,7 +237,7 @@ else:
             print(f"  - {raw_line}")
 
     if not stats["ready_for_test_spec"]:
-        print("ERROR: implementation is not ready to move to /test-spec.")
+        print("ERROR: implementation is not ready to move to /test-specify.")
         for item in blocked_items[:20]:
             print(f"  - {item['id']}: {item['reason']} pending")
 

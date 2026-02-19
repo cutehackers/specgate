@@ -78,7 +78,7 @@ You **MUST** consider the user input before proceeding (if not empty).
      `/checklist` does not decide phase transitions or modify readiness state.
 
 2. **Clarify intent (dynamic)**: Derive up to THREE initial contextual clarifying questions (no pre-baked catalog). They MUST:
-   - Be generated from the user's phrasing + extracted signals from spec/code
+   - Be generated from the user's phrasing + extracted signals from spec/codify
    - Only ask about information that materially changes checklist content
    - Be skipped individually if already unambiguous in `$ARGUMENTS`
    - Prefer precision over breadth
@@ -113,7 +113,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Derive checklist theme (e.g., security, review, deploy, ux)
    - Consolidate explicit must-have items mentioned by user
    - Map focus selections to category scaffolding
-   - Infer any missing context from spec/code (do NOT hallucinate)
+   - Infer any missing context from spec/codify (do NOT hallucinate)
 
 4. **Load feature context**: Read from FEATURE_DOCS_DIR:
    - spec.md: Feature requirements and scope (required)
@@ -173,7 +173,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    **ITEM STRUCTURE**:
    Each item should follow this pattern:
    - Question format asking about requirement quality
-   - Focus on what's WRITTEN (or not written) in the spec/code
+   - Focus on what's WRITTEN (or not written) in the spec/codify
    - Include quality dimension in brackets [Completeness/Clarity/Consistency/etc.]
    - Reference spec section `[Spec §X.Y]` when checking existing requirements
    - Use `[Gap]` marker when checking for missing requirements

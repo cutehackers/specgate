@@ -170,7 +170,7 @@ Given that feature description, do this:
       
       ## Notes
       
-      - Items marked incomplete require spec updates before `/clarify` or `/code`
+      - Items marked incomplete require spec updates before `/clarify` or `/codify`
       ```
 
    b. **Run Validation Check**: Review the spec against each checklist item:
@@ -236,7 +236,7 @@ Given that feature description, do this:
    ```
    - `feature_id` and `progress` are synchronized automatically from feature docs.
 
-8. Report completion with feature directory, spec file path, checklist results, and readiness for the next phase (`/clarify` or `/code`) and pointer stage set to `specifying`. Include branch name only if created.
+8. Report completion with feature directory, spec file path, checklist results, and readiness for the next phase (`/clarify` or `/codify`) and pointer stage set to `specifying`. Include branch name only if created.
 
 **NOTE:** The script initializes `spec.md` under `<feature_dir>/docs/` only when missing. Branch creation is optional (`--create-branch`).
 
@@ -247,7 +247,7 @@ Given that feature description, do this:
 - Focus on **WHAT** users need and **WHY**.
 - Avoid HOW to implement (no tech stack, APIs, code structure).
 - Written for business stakeholders, not developers.
-- Keep UI behavior requirement-level only; do not include screen layout, component, or visual implementation detail. Screen-level abstraction is handled in `screen_abstraction.md` during `/code`.
+- Keep UI behavior requirement-level only; do not include screen layout, component, or visual implementation detail. Screen-level abstraction is handled in `screen_abstraction.md` during `/codify`.
 - Do not request or define concrete UI work; downstream implementation is controller/state contract-first.
 - DO NOT create any checklists that are embedded in the spec. That will be a separate command.
 
