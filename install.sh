@@ -13,6 +13,7 @@ fi
 PREFIX="."
 DRY_RUN=0
 FORCE=0
+UNINSTALL=0
 VERSION="main"
 REPO_URL="${REPO_URL:-https://github.com/cutehackers/specgate}"
 SCRIPT_SOURCE_DIR=""
@@ -47,6 +48,7 @@ Options:
   --prefix <path>    Install target directory (default: .)
   --dry-run          Show planned file operations without writing files
   --force            Overwrite existing files/directories
+  --uninstall        Remove SpecGate files from the target directory
   --version <name>    Ref to install when downloading (default: main)
   --ai <list>        Agents to install (comma-separated). Supported: all, claude, codex, opencode
   --agent <list>     Alias for --ai
@@ -89,6 +91,10 @@ case "$1" in
       ;;
     --force)
       FORCE=1
+      shift
+      ;;
+    --uninstall)
+      UNINSTALL=1
       shift
       ;;
     -h|--help)
@@ -151,8 +157,14 @@ normalize_ai_selection() {
 }
 
 build_assets() {
+  local include_common="$1"
+  shift
   local -a selected=("$@")
-  ASSETS=("${COMMON_ASSETS[@]}")
+  ASSETS=()
+
+  if (( include_common == 1 )); then
+    ASSETS+=("${COMMON_ASSETS[@]}")
+  fi
 
   local agent
   for agent in "${selected[@]}"; do
@@ -209,13 +221,16 @@ resolve_remote_archive() {
 
 normalize_output="$(normalize_ai_selection "$AGENT_SELECTION")"
 read -r -a SELECTED_AGENTS <<< "$normalize_output"
-build_assets "${SELECTED_AGENTS[@]}"
 
 if [[ "${#SELECTED_AGENTS[@]}" -eq "${#KNOWN_AGENTS[@]}" ]]; then
   SELECTED_AGENTS_LABEL="all"
+  INCLUDE_COMMON_ASSETS=1
 else
   SELECTED_AGENTS_LABEL="${SELECTED_AGENTS[*]}"
+  INCLUDE_COMMON_ASSETS=0
 fi
+
+build_assets "$INCLUDE_COMMON_ASSETS" "${SELECTED_AGENTS[@]}"
 
 resolve_script_source() {
   if [[ -n "${SCRIPT_DIR}" ]] && has_local_assets "${SCRIPT_DIR}" "${ASSETS[@]}"; then
@@ -252,10 +267,49 @@ resolve_script_source() {
   echo "${extracted_dir}"
 }
 
-SCRIPT_SOURCE_DIR="$(resolve_script_source)"
-
 mkdir -p "$PREFIX"
 TARGET_DIR="$(cd "$PREFIX" && pwd)"
+
+remove_item() {
+  local rel_path="$1"
+  local target_path="$TARGET_DIR/$rel_path"
+  local parent_dir
+
+  if [[ ! -e "$target_path" ]]; then
+    echo "SKIP: $rel_path does not exist"
+    return 0
+  fi
+
+  if (( DRY_RUN == 1 )); then
+    echo "DRY-RUN: would remove $rel_path"
+    return 0
+  fi
+
+  rm -rf "$target_path"
+  echo "Removed: $rel_path"
+
+  parent_dir="$(dirname "$target_path")"
+  while [[ "$parent_dir" != "$TARGET_DIR" && "$parent_dir" != "/" ]]; do
+    if rmdir "$parent_dir" 2>/dev/null; then
+      parent_dir="$(dirname "$parent_dir")"
+    else
+      break
+    fi
+  done
+}
+
+if (( UNINSTALL == 1 )); then
+  echo "Uninstalling SpecGate from $TARGET_DIR"
+  echo "Target agents: ${SELECTED_AGENTS_LABEL}"
+  for asset in "${ASSETS[@]}"; do
+    remove_item "$asset"
+  done
+
+  echo "Uninstallation completed."
+  exit 0
+fi
+
+SCRIPT_SOURCE_DIR="$(resolve_script_source)"
 
 copy_item() {
   local rel_path="$1"

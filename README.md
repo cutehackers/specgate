@@ -40,6 +40,20 @@ curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.s
   | bash -s -- --ai claude,opencode --prefix .
 ```
 
+Uninstall from a consumer project:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh \
+  | bash -s -- --uninstall --prefix .
+```
+
+Uninstall only one agent surface:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh \
+  | bash -s -- --uninstall --ai claude --prefix .
+```
+
 Or install from a local clone:
 
 From the project root that will use SpecGate:
@@ -65,7 +79,8 @@ The installer creates/overwrites:
 - `--dry-run`: show planned file operations without changing files
 - `--force`: overwrite existing target files (default keeps existing files and skips)
 - `--version`: branch or tag for remote bootstrap (default: `main`)
-- `--ai` / `--agent`: install scope, comma-separated values from `all`, `claude`, `codex`, `opencode`
+- `--ai` / `--agent`: install/uninstall scope, comma-separated values from `all`, `claude`, `codex`, `opencode`
+- `--uninstall`: remove the selected scope's assets instead of installing
 
 ## Required smoke checks
 
