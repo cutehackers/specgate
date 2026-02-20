@@ -102,7 +102,7 @@ def is_meaningful_line(line: str) -> bool:
     raw = line.strip()
     if not raw:
         return False
-    if raw.startswith("```") or raw.startswith("~~~"):
+    if raw.startswith('```') or raw.startswith('~~~'):
         return False
     if raw.startswith("<!--") and raw.endswith("-->"):
         return False
@@ -122,7 +122,7 @@ def has_meaningful_content(lines: str) -> bool:
     in_code_block = False
     for raw_line in lines.splitlines():
         stripped = raw_line.strip()
-        if stripped.startswith("```") or stripped.startswith("~~~"):
+        if stripped.startswith('```') or stripped.startswith('~~~'):
             in_code_block = not in_code_block
             continue
         if in_code_block:
@@ -155,7 +155,7 @@ def section_text(path: Path):
             if re.match(r"^\s*#{1,4}\s+\S", raw_line):
                 break
             stripped = raw_line.strip()
-            if stripped.startswith("```") or stripped.startswith("~~~"):
+            if stripped.startswith('```') or stripped.startswith('~~~'):
                 in_code_block = not in_code_block
                 continue
             if in_code_block:
