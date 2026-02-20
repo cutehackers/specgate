@@ -7,7 +7,18 @@ Install directly into your project without cloning.
 
 - Default install path: current directory (`.`)
 - Default scope: all agents (`claude`, `codex`, `opencode`)
-- Entry points: `/feature-set`, `/specify`, `/clarify`, `/codify`, `/test-specify`, `/test-codify`, `/feature-done`
+- Entry points:
+  - `/feature-set`
+  - `/specify`
+  - `/clarify`
+  - `/codify`
+  - `/checklist`
+  - `/analyze`
+  - `/test-specify`
+  - `/test-codify`
+  - `/taskstoissues`
+  - `/constitution`
+  - `/feature-done`
 
 ## 1) Quick start
 
@@ -25,6 +36,8 @@ ls -la .specify .claude .codex .opencode
 ```
 
 You should see the folders for your selected agents.
+For Codex, run workflows via `.codex/skills/specgate/<workflow>/SKILL.md` directly.  
+If a workflow needs additional input, ask it directly in the Codex chat (do not rely on `AskUserQuestion`).
 
 ## 2) Install modes
 
@@ -40,6 +53,18 @@ bash /tmp/specgate-install.sh --prefix .
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
 bash /tmp/specgate-install.sh --ai claude --prefix .
+```
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
+# Install Codex skill under project: .codex/skills/specgate
+bash /tmp/specgate-install.sh --ai codex --codex-target project --prefix .
+```
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
+# Install Codex skill under Codex home: ~/.codex/skills/specgate
+bash /tmp/specgate-install.sh --ai codex --codex-target home --prefix .
 ```
 
 ```bash
@@ -65,6 +90,7 @@ Supported values: `all`, `claude`, `codex`, `opencode`.
 --version <name>    Install from branch/tag (default: main)
 --ai <list>         Install scope
 --agent <list>      Alias for --ai
+--codex-target <project|home>  Where to install Codex Agent Skills when --ai includes codex (default: project)
 --uninstall         Remove SpecGate assets instead of installing
 ```
 
@@ -72,7 +98,7 @@ Supported values: `all`, `claude`, `codex`, `opencode`.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
-bash /tmp/specgate-install.sh --dry-run --ai codex --prefix .
+bash /tmp/specgate-install.sh --dry-run --ai codex --codex-target project --prefix .
 ```
 
 ```bash
@@ -99,11 +125,14 @@ bash /tmp/specgate-install.sh --uninstall --ai claude --prefix .
 - `.specify/*`
 - `.claude/commands/specgate/*`
 - `.claude/hooks/statusline.js`
-- `.codex/commands/specgate/*`
+- `.codex/skills/specgate/*` (project install: `.codex/skills/specgate`, or home install: `~/.codex/skills/specgate`)
+  - Includes workflow-dedicated skills: `feature-set`, `specify`, `clarify`, `codify`, `checklist`, `analyze`, `test-specify`, `test-codify`, `taskstoissues`, `constitution`, `feature-done`
 - `.opencode/command/*`
 - `docs/SPECGATE.md`
 
-## 6) Optional smoke checks
+Note: `.specify` and `docs/SPECGATE.md` are always installed together for single-agent installs (`--ai codex`, `--ai claude`, etc.).
+
+## 6) Recommended checks (instead of daily smoke check)
 
 Run from repository root:
 
@@ -116,12 +145,13 @@ bash -n .specify/scripts/bash/check-code-prerequisites.sh \
   .specify/scripts/bash/check-test-coverage-targets.sh \
   .specify/scripts/bash/specgate-sync-pointer.sh \
   .specify/scripts/bash/specgate-status.sh \
-  .specify/scripts/bash/specgate-smoke-check.sh \
   .specify/scripts/bash/setup-code.sh \
   .specify/scripts/bash/setup-test-spec.sh
 
-./.specify/scripts/bash/specgate-smoke-check.sh
+./.specify/scripts/bash/specgate-status.sh
 ```
+
+`specgate-smoke-check.sh` remains available as an installation validation script, but is not recommended as a routine daily check.
 
 For detailed operation guidance, see `docs/SPECGATE.md`.
 

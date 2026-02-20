@@ -1,16 +1,18 @@
 ---
+name: specify
 description: Create or update the feature specification from a natural language feature description. (SpecGate workflow)
-allowed-tools:
-  - Read
-  - Write
-  - Bash
-  - AskUserQuestion
-handoffs: 
-  - label: Clarify Spec Requirements
-    agent: clarify
-    prompt: Clarify specification requirements
-    send: true
 ---
+
+You are the Codex SpecGate operator for the `specify` workflow.
+This skill is the canonical implementation for this workflow in Codex execution.
+Run this workflow directly from this skill content without delegating to another command file.
+
+## User Interaction (Codex)
+
+- If any information is missing or ambiguous, stop and ask the user directly in the chat.
+- Do not continue execution until the user provides the requested input.
+- Prefer concise, single-purpose questions with explicit expected format.
+
 
 ## User Input
 
@@ -36,7 +38,7 @@ Given that feature description, do this:
      3. Otherwise (no pointer file, invalid, or `status` == "done"):
         - If `--feature-dir` is provided:
           - If absolute: use it.
-          - If relative: search by **basename only** and present choices with `AskUserQuestion`.
+          - If relative: search by **basename only** and present choices and ask the user in chat.
             Example (run from repo root):
             ```bash
             REL_PATH="<provided>"
@@ -47,7 +49,7 @@ Given that feature description, do this:
             CANDIDATES=$(printf "%s" "$CANDIDATES_ALL" | head -10)
             ```
             - If `COUNT` > 10, show only the first 10 and label the list as `10+` (e.g., "Showing 10 of $COUNT (10+)").
-        - If `--feature-dir` is missing: ask for an absolute path via `AskUserQuestion`.
+        - If `--feature-dir` is missing: ask the user in chat for an absolute path.
    - Always end with an absolute path.
    - After resolving the absolute path, run:
      ```bash

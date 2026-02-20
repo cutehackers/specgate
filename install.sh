@@ -19,6 +19,7 @@ REPO_URL="${REPO_URL:-https://github.com/cutehackers/specgate}"
 SCRIPT_SOURCE_DIR=""
 TMP_DIR=""
 AGENT_SELECTION="all"
+CODEX_TARGET_MODE="project"
 
 KNOWN_AGENTS=(claude codex opencode)
 COMMON_ASSETS=(
@@ -30,13 +31,16 @@ CLAUDE_ASSETS=(
   ".claude/hooks/statusline.js"
 )
 CODEX_ASSETS=(
-  ".codex/commands/specgate"
+)
+CODEX_SKILL_ASSETS=(
+  ".codex/skills/specgate"
 )
 OPENCODE_ASSETS=(
   ".opencode/command"
 )
 ASSETS=()
 SELECTED_AGENTS=()
+SELECTED_CODEX=0
 
 print_usage() {
   cat <<'USAGE'
@@ -52,6 +56,7 @@ Options:
   --version <name>    Ref to install when downloading (default: main)
   --ai <list>        Agents to install (comma-separated). Supported: all, claude, codex, opencode
   --agent <list>     Alias for --ai
+  --codex-target <project|home>  Where to install Codex Agent Skills when --ai includes codex (default: project)
   -h, --help         Show this help
 USAGE
 }
@@ -87,6 +92,20 @@ case "$1" in
         exit 1
       fi
       AGENT_SELECTION="${2:-}"
+      shift 2
+      ;;
+    --codex-target)
+      if [[ $# -lt 2 || -z "${2:-}" ]]; then
+        echo "Missing value for --codex-target"
+        print_usage
+        exit 1
+      fi
+      CODEX_TARGET_MODE="${2:-}"
+      if [[ "$CODEX_TARGET_MODE" != "project" && "$CODEX_TARGET_MODE" != "home" ]]; then
+        echo "Unsupported --codex-target value: $CODEX_TARGET_MODE" >&2
+        echo "Supported values: project, home" >&2
+        exit 1
+      fi
       shift 2
       ;;
     --force)
@@ -157,29 +176,34 @@ normalize_ai_selection() {
 }
 
 build_assets() {
-  local include_common="$1"
-  shift
   local -a selected=("$@")
   ASSETS=()
 
-  if (( include_common == 1 )); then
-    ASSETS+=("${COMMON_ASSETS[@]}")
-  fi
+  ASSETS+=("${COMMON_ASSETS[@]}")
 
   local agent
+  local has_codex=0
   for agent in "${selected[@]}"; do
     case "$agent" in
       claude)
         ASSETS+=("${CLAUDE_ASSETS[@]}")
         ;;
       codex)
-        ASSETS+=("${CODEX_ASSETS[@]}")
+        has_codex=1
+        if ((${#CODEX_ASSETS[@]} > 0)); then
+          ASSETS+=("${CODEX_ASSETS[@]}")
+        fi
+        if [[ "$CODEX_TARGET_MODE" == "project" ]]; then
+          ASSETS+=("${CODEX_SKILL_ASSETS[@]}")
+        fi
         ;;
       opencode)
         ASSETS+=("${OPENCODE_ASSETS[@]}")
         ;;
     esac
   done
+
+  SELECTED_CODEX=$has_codex
 }
 
 has_local_assets() {
@@ -224,13 +248,11 @@ read -r -a SELECTED_AGENTS <<< "$normalize_output"
 
 if [[ "${#SELECTED_AGENTS[@]}" -eq "${#KNOWN_AGENTS[@]}" ]]; then
   SELECTED_AGENTS_LABEL="all"
-  INCLUDE_COMMON_ASSETS=1
 else
   SELECTED_AGENTS_LABEL="${SELECTED_AGENTS[*]}"
-  INCLUDE_COMMON_ASSETS=0
 fi
 
-build_assets "$INCLUDE_COMMON_ASSETS" "${SELECTED_AGENTS[@]}"
+build_assets "${SELECTED_AGENTS[@]}"
 
 resolve_script_source() {
   if [[ -n "${SCRIPT_DIR}" ]] && has_local_assets "${SCRIPT_DIR}" "${ASSETS[@]}"; then
@@ -304,6 +326,20 @@ if (( UNINSTALL == 1 )); then
   for asset in "${ASSETS[@]}"; do
     remove_item "$asset"
   done
+  if (( SELECTED_CODEX == 1 )); then
+    if [[ "$CODEX_TARGET_MODE" == "home" ]]; then
+      if [[ -z "${HOME:-}" ]]; then
+        echo "HOME is required when --codex-target home is used." >&2
+        exit 1
+      fi
+      previous_target_dir="${TARGET_DIR}"
+      TARGET_DIR="${HOME}"
+      for asset in "${CODEX_SKILL_ASSETS[@]}"; do
+        remove_item "$asset"
+      done
+      TARGET_DIR="${previous_target_dir}"
+    fi
+  fi
 
   echo "Uninstallation completed."
   exit 0
@@ -352,5 +388,17 @@ echo "Target agents: ${SELECTED_AGENTS_LABEL}"
 for asset in "${ASSETS[@]}"; do
   copy_item "$asset"
 done
+if (( SELECTED_CODEX == 1 )) && [[ "$CODEX_TARGET_MODE" == "home" ]]; then
+  if [[ -z "${HOME:-}" ]]; then
+    echo "HOME is required when --codex-target home is used." >&2
+    exit 1
+  fi
+  previous_target_dir="${TARGET_DIR}"
+  TARGET_DIR="${HOME}"
+  for asset in "${CODEX_SKILL_ASSETS[@]}"; do
+    copy_item "$asset"
+  done
+  TARGET_DIR="${previous_target_dir}"
+fi
 
 echo "Installation completed."

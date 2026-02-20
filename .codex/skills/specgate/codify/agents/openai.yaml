@@ -1,0 +1,7 @@
+interface:
+  display_name: "SpecGate: codify"
+  short_description: "Execute the implementation code-spec workflow using the code template to generate design artifacts. (SpecGate workflow)"
+  default_prompt: "Run the codify workflow from the SpecGate skill in the active feature context."
+  brand_color: "#0EA5E9"
+policy:
+  allow_implicit_invocation: true

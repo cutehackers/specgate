@@ -1,0 +1,7 @@
+interface:
+  display_name: "SpecGate: feature-set"
+  short_description: "Set or change the current feature pointer used by the command workflow. (SpecGate workflow)"
+  default_prompt: "Run the feature-set workflow from the SpecGate skill in the active feature context."
+  brand_color: "#0EA5E9"
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,7 @@
+interface:
+  display_name: "SpecGate: analyze"
+  short_description: "Analyze consistency across `spec.md` and `code.md` with architecture and abstraction gates (SpecGate workflow)"
+  default_prompt: "Run the analyze workflow from the SpecGate skill in the active feature context."
+  brand_color: "#0EA5E9"
+policy:
+  allow_implicit_invocation: true

@@ -1,11 +1,18 @@
 ---
+name: checklist
 description: Generate a custom checklist for the current feature based on user requirements. (SpecGate workflow)
-allowed-tools:
-  - Read
-  - Write
-  - Bash
-  - AskUserQuestion
 ---
+
+You are the Codex SpecGate operator for the `checklist` workflow.
+This skill is the canonical implementation for this workflow in Codex execution.
+Run this workflow directly from this skill content without delegating to another command file.
+
+## User Interaction (Codex)
+
+- If any information is missing or ambiguous, stop and ask the user directly in the chat.
+- Do not continue execution until the user provides the requested input.
+- Prefer concise, single-purpose questions with explicit expected format.
+
 
 ## Checklist Purpose: "Unit Tests for English"
 
@@ -48,7 +55,7 @@ You **MUST** consider the user input before proceeding (if not empty).
      3. Otherwise (no pointer file, invalid, or `status` == "done"):
         - If `--feature-dir` is provided:
           - If absolute: use it.
-          - If relative: search by **basename only** and present choices with `AskUserQuestion`.
+          - If relative: search by **basename only** and present choices and ask the user in chat.
             Example (run from repo root):
             ```bash
             REL_PATH="<provided>"
@@ -59,7 +66,7 @@ You **MUST** consider the user input before proceeding (if not empty).
             CANDIDATES=$(printf "%s" "$CANDIDATES_ALL" | head -10)
             ```
             - If `COUNT` > 10, show only the first 10 and label the list as `10+` (e.g., "Showing 10 of $COUNT (10+)").
-        - If `--feature-dir` is missing: ask for an absolute path via `AskUserQuestion`.
+        - If `--feature-dir` is missing: ask the user in chat for an absolute path.
    - Always end with an absolute path.
    - Run `.specify/scripts/bash/check-prerequisites.sh --json --paths-only --feature-dir "<abs path>"` from repo root and parse JSON for FEATURE_DIR and FEATURE_DOCS_DIR.
      - All file paths must be absolute.

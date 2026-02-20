@@ -1,0 +1,7 @@
+interface:
+  display_name: "SpecGate: feature-done"
+  short_description: "Mark the current feature as done and optionally switch to a new current feature. (SpecGate workflow)"
+  default_prompt: "Run the feature-done workflow from the SpecGate skill in the active feature context."
+  brand_color: "#0EA5E9"
+policy:
+  allow_implicit_invocation: true

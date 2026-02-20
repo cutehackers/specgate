@@ -1,12 +1,18 @@
 ---
+name: test-codify
 description: Execute the SpecGate test implementation workflow using test-spec.md#test-code as the execution source. (SpecGate workflow)
-allowed-tools:
-  - Read
-  - Write
-  - Edit
-  - Bash
-  - AskUserQuestion
 ---
+
+You are the Codex SpecGate operator for the `test-codify` workflow.
+This skill is the canonical implementation for this workflow in Codex execution.
+Run this workflow directly from this skill content without delegating to another command file.
+
+## User Interaction (Codex)
+
+- If any information is missing or ambiguous, stop and ask the user directly in the chat.
+- Do not continue execution until the user provides the requested input.
+- Prefer concise, single-purpose questions with explicit expected format.
+
 
 ## 0. Purpose & Inputs
 
@@ -34,7 +40,27 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 ## Workflow Overview
 
-1. Resolve feature directory from pointer flow.
+1. Resolve feature directory with this priority:
+   1. Use local pointer path for this worktree:
+      - `POINTER_PATH=specs/feature-stage.local.json`
+   2. If `POINTER_PATH` exists and `status` != "done":
+      - If `--feature-dir` is provided: **STOP** and tell the user to use `/feature-set` or `/feature-done` to change the current feature. `--feature-dir` is only allowed when no active feature is set.
+      - Otherwise, use `feature_dir` from the pointer file.
+   3. Otherwise (no pointer file, invalid, or `status` == "done"):
+      - If `--feature-dir` is provided:
+        - If absolute: use it.
+        - If relative: search by **basename only** and present choices and ask the user in chat.
+          ```bash
+          REL_PATH="<provided>"
+          REPO_ROOT="$(pwd)"
+          BASENAME="$(basename "$REL_PATH")"
+          CANDIDATES_ALL=$(find "$REPO_ROOT" -type d -name "$BASENAME" 2>/dev/null | sort -u)
+          COUNT=$(printf "%s" "$CANDIDATES_ALL" | sed '/^$/d' | wc -l | tr -d ' ')
+          CANDIDATES=$(printf "%s" "$CANDIDATES_ALL" | head -10)
+          ```
+          - If `COUNT` > 10, show only the first 10 and label the list as `10+` (e.g., "Showing 10 of $COUNT (10+)").
+      - If `--feature-dir` is missing: ask the user in chat for an absolute path.
+   4. Always end with an absolute path.
 2. Run `.specify/scripts/bash/specgate-sync-pointer.sh --feature-dir "<abs path>" --preserve-stage --json` to refresh pointer progress.
 3. Run `.specify/scripts/bash/check-test-prerequisites.sh --json --feature-dir "<abs path>"`.
 4. Read `test-spec.md` and parse:

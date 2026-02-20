@@ -30,9 +30,16 @@ Then start using commands from your agent:
 - `/specify`
 - `/clarify` (optional)
 - `/codify`
+- `/checklist`
+- `/analyze`
 - `/test-specify`
 - `/test-codify`
+- `/taskstoissues`
+- `/constitution`
 - `/feature-done`
+
+For Codex, use workflow SKILLs in `.codex/skills/specgate/*/SKILL.md` directly.  
+When a workflow needs user input, do not use `AskUserQuestion`; ask the user directly in chat and wait for their response.
 
 ---
 
@@ -41,8 +48,9 @@ Then start using commands from your agent:
 - `.specify` : workflow scripts and templates
 - `.claude/commands/specgate/*`
 - `.opencode/command/*`
-- `.codex/commands/specgate/*`
 - `.claude/hooks/statusline.js`
+- `.codex/skills/specgate/*`
+- workflow-specific Codex skills under `.codex/skills/specgate/*/SKILL.md`
 - `docs/SPECGATE.md` (this file)
 
 `specs/feature-stage.local.json` is not included in initial install.
@@ -56,16 +64,24 @@ It is created when you run `/feature-set`.
 2. Run `/specify`
 3. Run `/clarify` (if needed)
 4. Run `/codify`
-5. Run `/test-specify`
-6. Run `/test-codify`
-7. Run `/feature-done`
+5. Optionally run `/checklist` to validate requirement quality
+6. Run `/test-specify`
+7. Run `/test-codify`
+8. Optionally run `/analyze` after `/test-codify` or before `/feature-done`
+9. Optionally run `/taskstoissues` to sync implementation tasks to GitHub issues
+10. Optionally run `/constitution` when governance rules change
+11. Run `/feature-done`
 
 ### Where each command should end
 
 - `spec.md` and checklist sections from `/specify` should be complete for that feature.
 - `/codify` must include P1 items and all `[P2][BLOCKING]` items.
+- `/checklist` should close with a completed checklist artifact and noted non-blocking improvements.
 - `/test-specify` creates a single test execution queue in `test-spec.md`.
 - `/test-codify` should consume that queue.
+- `/analyze` should output findings and next recommended command.
+- `/taskstoissues` should map only actionable `code.md` tasks to issue requests.
+- `/constitution` should keep templates and project policy aligned.
 - `/feature-done` should end after cleanup and validation.
 
 If a step fails:
@@ -115,18 +131,32 @@ bash -n .specify/scripts/bash/check-code-prerequisites.sh \
   .specify/scripts/bash/check-test-coverage-targets.sh \
   .specify/scripts/bash/specgate-sync-pointer.sh \
   .specify/scripts/bash/specgate-status.sh \
-  .specify/scripts/bash/specgate-smoke-check.sh \
   .specify/scripts/bash/setup-code.sh \
   .specify/scripts/bash/setup-test-spec.sh
 
-./.specify/scripts/bash/specgate-smoke-check.sh
+./.specify/scripts/bash/specgate-status.sh
 ```
+
+Tip: `specgate-smoke-check.sh` is kept as an installation validation script, not a daily routine.
 
 Tip: if your environment blocks some tools, use fallback options documented in the scripts.
 
+## 6. Codex automation candidates (optional)
+
+For Codex users, the most stable automation candidates are:
+
+- `test-specify` (queue generation from accepted spec)
+- `test-codify` (deterministic test run loop execution)
+
+Both remain interactive-safe to run after plan/setup is stable, but the heavier requirement-rich workflows (`feature-set`, `specify`, `clarify`, `codify`, `feature-done`) should stay in SKILL execution because they include user decisions and branching.
+
+Suggested automation cadence:
+- `test-specify` weekly/hourly status refresh: run after upstream changes or when requirements are updated.
+- `test-codify` as a recurring loop: run only when `test-spec.md` task queue is ready and no blocking changes are pending.
+
 ---
 
-## 6. Common mistakes (for beginners)
+## 7. Common mistakes (for beginners)
 
 - Do not use legacy command surfaces (`velospec`, `plan`, `tasks`, `tasks-test`) in this environment.
 - Do not put concrete Flutter widget or animation instructions into `code.md`/`test-spec.md`.
@@ -135,7 +165,7 @@ Tip: if your environment blocks some tools, use fallback options documented in t
 
 ---
 
-## 7. Uninstall
+## 8. Uninstall
 
 If needed:
 

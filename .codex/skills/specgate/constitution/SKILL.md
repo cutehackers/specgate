@@ -1,10 +1,18 @@
 ---
+name: constitution
 description: Create or update the project constitution from interactive or provided principle inputs, ensuring all dependent templates stay in sync. (SpecGate workflow)
-handoffs: 
-  - label: Build Specification
-    agent: specify
-    prompt: Implement the feature specification based on the updated constitution. I want to build...
 ---
+
+You are the Codex SpecGate operator for the `constitution` workflow.
+This skill is the canonical implementation for this workflow in Codex execution.
+Run this workflow directly from this skill content without delegating to another command file.
+
+## User Interaction (Codex)
+
+- If any information is missing or ambiguous, stop and ask the user directly in the chat.
+- Do not continue execution until the user provides the requested input.
+- Prefer concise, single-purpose questions with explicit expected format.
+
 
 ## User Input
 

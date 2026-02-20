@@ -1,0 +1,7 @@
+interface:
+  display_name: "SpecGate: test-codify"
+  short_description: "Execute the SpecGate test implementation workflow using test-spec.md#test-code as the execution source. (SpecGate workflow)"
+  default_prompt: "Run the test-codify workflow from the SpecGate skill in the active feature context."
+  brand_color: "#0EA5E9"
+policy:
+  allow_implicit_invocation: true

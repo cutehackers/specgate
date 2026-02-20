@@ -1,12 +1,18 @@
 ---
+name: taskstoissues
 description: Convert existing tasks into actionable, dependency-ordered GitHub issues for the feature based on available design artifacts. (SpecGate workflow)
-allowed-tools:
-  - Read
-  - Write
-  - Bash
-  - AskUserQuestion
-tools: ['github/github-mcp-server/issue_write']
 ---
+
+You are the Codex SpecGate operator for the `taskstoissues` workflow.
+This skill is the canonical implementation for this workflow in Codex execution.
+Run this workflow directly from this skill content without delegating to another command file.
+
+## User Interaction (Codex)
+
+- If any information is missing or ambiguous, stop and ask the user directly in the chat.
+- Do not continue execution until the user provides the requested input.
+- Prefer concise, single-purpose questions with explicit expected format.
+
 
 ## User Input
 
@@ -28,7 +34,7 @@ You **MUST** consider the user input before proceeding (if not empty).
      3. Otherwise (no pointer file, invalid, or `status` == "done"):
         - If `--feature-dir` is provided:
           - If absolute: use it.
-          - If relative: search by **basename only** and present choices with `AskUserQuestion`.
+          - If relative: search by **basename only** and present choices and ask the user in chat.
             Example (run from repo root):
             ```bash
             REL_PATH="<provided>"
@@ -39,7 +45,7 @@ You **MUST** consider the user input before proceeding (if not empty).
             CANDIDATES=$(printf "%s" "$CANDIDATES_ALL" | head -10)
             ```
             - If `COUNT` > 10, show only the first 10 and label the list as `10+` (e.g., "Showing 10 of $COUNT (10+)").
-        - If `--feature-dir` is missing: ask for an absolute path via `AskUserQuestion`.
+        - If `--feature-dir` is missing: ask the user in chat for an absolute path.
    - Always end with an absolute path.
    - Then run `.specify/scripts/bash/check-prerequisites.sh --json --paths-only --feature-dir "<abs path>"` from repo root and parse FEATURE_DIR and FEATURE_DOCS_DIR. All paths must be absolute.
    - Validate that `<feature_dir>/docs/code.md` exists before proceeding:

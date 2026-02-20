@@ -1,12 +1,18 @@
 ---
+name: feature-done
 description: Mark the current feature as done and optionally switch to a new current feature. (SpecGate workflow)
-allowed-tools:
-  - Read
-  - Write
-  - Bash
-  - AskUserQuestion
-model: haiku
 ---
+
+You are the Codex SpecGate operator for the `feature-done` workflow.
+This skill is the canonical implementation for this workflow in Codex execution.
+Run this workflow directly from this skill content without delegating to another command file.
+
+## User Interaction (Codex)
+
+- If any information is missing or ambiguous, stop and ask the user directly in the chat.
+- Do not continue execution until the user provides the requested input.
+- Prefer concise, single-purpose questions with explicit expected format.
+
 
 ## User Input
 
@@ -22,7 +28,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Set pointer path for this worktree:
      - `POINTER_PATH=specs/feature-stage.local.json`
    - Read `POINTER_PATH` from repo root.
-   - If missing/invalid or `feature_dir` is empty, ask the user for the absolute `feature_dir` to mark as done.
+   - If missing/invalid or `feature_dir` is empty, ask the user in chat for the absolute `feature_dir` to mark as done.
    - Before finalizing, run `.specify/scripts/bash/specgate-sync-pointer.sh --feature-dir "<abs path>" --preserve-stage --json` to capture latest counters.
 
 2. **Mark done**:
@@ -37,7 +43,7 @@ You **MUST** consider the user input before proceeding (if not empty).
      ```
 
 3. **Offer to switch to a new feature**:
-   - Use `AskUserQuestion`: "Set a new current feature now?"
+   - Ask the user in chat: "Set a new current feature now?"
    - If yes, follow the `/feature-set` flow to choose a new `feature_dir` and update the pointer file to `status: "in_progress"`.
    - If no, stop after marking done.
 

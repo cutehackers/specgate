@@ -1,0 +1,7 @@
+interface:
+  display_name: "SpecGate: constitution"
+  short_description: "Create or update the project constitution from interactive or provided principle inputs, ensuring all dependent templates stay in sync. (SpecGate workflow)"
+  default_prompt: "Run the constitution workflow from the SpecGate skill in the active feature context."
+  brand_color: "#0EA5E9"
+policy:
+  allow_implicit_invocation: true

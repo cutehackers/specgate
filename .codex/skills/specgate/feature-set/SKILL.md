@@ -1,12 +1,18 @@
 ---
+name: feature-set
 description: Set or change the current feature pointer used by the command workflow. (SpecGate workflow)
-allowed-tools:
-  - Read
-  - Write
-  - Bash
-  - AskUserQuestion
-model: haiku
 ---
+
+You are the Codex SpecGate operator for the `feature-set` workflow.
+This skill is the canonical implementation for this workflow in Codex execution.
+Run this workflow directly from this skill content without delegating to another command file.
+
+## User Interaction (Codex)
+
+- If any information is missing or ambiguous, stop and ask the user directly in the chat.
+- Do not continue execution until the user provides the requested input.
+- Prefer concise, single-purpose questions with explicit expected format.
+
 
 ## User Input
 
@@ -21,7 +27,7 @@ You **MUST** consider the user input before proceeding (if not empty).
 1. **Resolve feature directory**:
    - If `--feature-dir` is provided:
      - If absolute: use it.
-     - If relative: search by **basename only** and present choices with `AskUserQuestion`.
+     - If relative: search by **basename only** and present choices and ask the user in chat.
 
        ```bash
        REL_PATH="<provided>"
@@ -40,7 +46,7 @@ You **MUST** consider the user input before proceeding (if not empty).
        REPO_ROOT="$(pwd)"
        CANDIDATES=$(find "$REPO_ROOT" -type f -path "*/docs/spec.md" 2>/dev/null | sed 's|/docs/spec.md$||' | sort -u | head -10)
        ```
-     - If no candidates are found, ask the user for an absolute path.
+     - If no candidates are found, ask the user in chat for an absolute path.
    - Always end with an absolute path.
 
 2. **Sync pointer state** (worktree-local file):

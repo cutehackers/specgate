@@ -1,15 +1,18 @@
 ---
+name: codify
 description: Execute the implementation code-spec workflow using the code template to generate design artifacts. (SpecGate workflow)
-allowed-tools:
-  - Read
-  - Write
-  - Bash
-  - AskUserQuestion
-handoffs: 
-  - label: Create Checklist
-    agent: checklist
-    prompt: Create a checklist for the following domain...
 ---
+
+You are the Codex SpecGate operator for the `codify` workflow.
+This skill is the canonical implementation for this workflow in Codex execution.
+Run this workflow directly from this skill content without delegating to another command file.
+
+## User Interaction (Codex)
+
+- If any information is missing or ambiguous, stop and ask the user directly in the chat.
+- Do not continue execution until the user provides the requested input.
+- Prefer concise, single-purpose questions with explicit expected format.
+
 
 ## User Input
 
@@ -34,7 +37,7 @@ Default execution flow: `/specify` -> `/clarify` -> `/codify` -> `/test-specify`
      3. Otherwise (no pointer file, invalid, or `status` == "done"):
         - If `--feature-dir` is provided:
           - If absolute: use it.
-          - If relative: search by **basename only** and present choices with `AskUserQuestion`.
+          - If relative: search by **basename only** and present choices and ask the user in chat.
             Example (run from repo root):
             ```bash
             REL_PATH="<provided>"
@@ -45,7 +48,7 @@ Default execution flow: `/specify` -> `/clarify` -> `/codify` -> `/test-specify`
             CANDIDATES=$(printf "%s" "$CANDIDATES_ALL" | head -10)
             ```
             - If `COUNT` > 10, show only the first 10 and label the list as `10+` (e.g., "Showing 10 of $COUNT (10+)").
-        - If `--feature-dir` is missing: ask for an absolute path via `AskUserQuestion`.
+        - If `--feature-dir` is missing: ask the user in chat for an absolute path.
    - Always end with an absolute path.
    - After resolving feature path, run:
      ```bash
@@ -180,7 +183,7 @@ Default execution flow: `/specify` -> `/clarify` -> `/codify` -> `/test-specify`
    - Avoid concrete UI implementation steps
 
 4. **Agent context update**:
-   - Run `.specify/scripts/bash/update-agent-context.sh --feature-dir "<abs path>" claude`
+   - Run `.specify/scripts/bash/update-agent-context.sh --feature-dir "<abs path>" codex`
    - These scripts detect which AI agent is in use
    - Update the appropriate agent-specific context file
    - Add only new technology from current plan

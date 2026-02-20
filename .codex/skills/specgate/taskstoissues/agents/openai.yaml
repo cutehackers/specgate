@@ -1,0 +1,7 @@
+interface:
+  display_name: "SpecGate: taskstoissues"
+  short_description: "Convert existing tasks into actionable, dependency-ordered GitHub issues for the feature based on available design artifacts. (SpecGate workflow)"
+  default_prompt: "Run the taskstoissues workflow from the SpecGate skill in the active feature context."
+  brand_color: "#0EA5E9"
+policy:
+  allow_implicit_invocation: true
