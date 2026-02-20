@@ -50,34 +50,32 @@ bash /tmp/specgate-install.sh --ai claude --prefix .
 
 ### 에이전트별 단일 설치 가이드
 
-공통으로 먼저 실행할 내용 (한 번만):
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
-```
-
 1) Claude만 설치
 
 ```bash
-bash /tmp/specgate-install.sh --ai claude --prefix .
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh \
+  && bash /tmp/specgate-install.sh --ai claude --prefix .
 ```
 
 2) Opencode만 설치
 
 ```bash
-bash /tmp/specgate-install.sh --ai opencode --prefix .
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh \
+  && bash /tmp/specgate-install.sh --ai opencode --prefix .
 ```
 
 3) Codex 프로젝트 스코프 설치(기본)
 
 ```bash
-bash /tmp/specgate-install.sh --ai codex --codex-target project --prefix .
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh \
+  && bash /tmp/specgate-install.sh --ai codex --codex-target project --prefix .
 ```
 
 4) Codex 홈 스코프 설치(공유)
 
 ```bash
-bash /tmp/specgate-install.sh --ai codex --codex-target home --prefix .
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh \
+  && bash /tmp/specgate-install.sh --ai codex --codex-target home --prefix .
 ```
 
 `--ai`와 `--agent`는 같은 옵션입니다.

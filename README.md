@@ -50,34 +50,32 @@ bash /tmp/specgate-install.sh --ai claude --prefix .
 
 ### Install by agent (single agent)
 
-Common first step (run once):
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
-```
-
 1) Claude only
 
 ```bash
-bash /tmp/specgate-install.sh --ai claude --prefix .
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh \
+  && bash /tmp/specgate-install.sh --ai claude --prefix .
 ```
 
 2) Opencode only
 
 ```bash
-bash /tmp/specgate-install.sh --ai opencode --prefix .
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh \
+  && bash /tmp/specgate-install.sh --ai opencode --prefix .
 ```
 
 3) Codex in project scope (default for project install)
 
 ```bash
-bash /tmp/specgate-install.sh --ai codex --codex-target project --prefix .
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh \
+  && bash /tmp/specgate-install.sh --ai codex --codex-target project --prefix .
 ```
 
 4) Codex in home scope (shared across projects)
 
 ```bash
-bash /tmp/specgate-install.sh --ai codex --codex-target home --prefix .
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh \
+  && bash /tmp/specgate-install.sh --ai codex --codex-target home --prefix .
 ```
 
 ### Installation mapping guide (single agent)
