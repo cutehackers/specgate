@@ -1,6 +1,6 @@
 ---
 name: analyze
-description: Analyze consistency across `spec.md` and `code.md` with architecture and abstraction gates (SpecGate workflow)
+description: Analyze consistency across `spec.md` and `tasks.md` with architecture and abstraction gates (SpecGate workflow)
 ---
 
 You are the Codex SpecGate operator for the `analyze` workflow.
@@ -44,7 +44,7 @@ Run a non-destructive quality check before or during implementation.
 2. Run `.specify/scripts/bash/check-spec-prerequisites.sh --feature-dir "<abs path>"`.
 3. Run `.specify/scripts/bash/check-code-prerequisites.sh --feature-dir "<abs path>"`.
 4. Load:
-   - Required: `spec.md`, `code.md`
+   - Required: `spec.md`, `tasks.md`
    - If present, also load each optional artifact and record only in findings:
      - `screen_abstraction.md`: validate screen/event coverage
      - `quickstart.md`: validate readiness scenarios
@@ -54,7 +54,7 @@ Run a non-destructive quality check before or during implementation.
 ## 2. Analysis Focus
 
 - Requirement coverage:
-  - `spec.md` FR/US/AC are represented in `code.md#code-tasks`.
+  - `spec.md` FR/US/AC are represented in `tasks.md#code-tasks`.
 - Architecture compliance:
   - layer boundaries and dependency direction remain valid.
 - Presentation abstraction compliance:
@@ -68,7 +68,7 @@ Provide a compact findings table:
 
 | ID | Severity | Artifact | Issue | Recommended Fix |
 |----|----------|----------|-------|-----------------|
-| A1 | HIGH/MED/LOW | spec.md or code.md | [issue] | [action] |
+| A1 | HIGH/MED/LOW | spec.md or tasks.md | [issue] | [action] |
 
 Then add:
 

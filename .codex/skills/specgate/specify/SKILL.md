@@ -90,10 +90,12 @@ Given that feature description, do this:
 4.1 **Apply SpecGate artifact policy**:
    - This command is part of the **SpecGate workflow** and must seed docs for maintainability.
    - Mandatory maintenance artifacts for a feature:
-     - `spec.md`, `code.md`, `screen_abstraction.md`, `quickstart.md`, `checklists/*`
+     - `spec.md`, `research.md`, `checklists/*`
+   - `research.md` is the canonical requirement/ambiguity/constraint register.
+     - `/specify` creates and owns the initial baseline.
+     - `/clarify` may update it only when ambiguity decisions materially alter assumptions, feasibility, or external dependencies.
+     - `/codify` treats it as implementation input and should not rewrite it.
    - Conditional artifacts (create during downstream steps when applicable):
-     - `research.md` (uncertainty/external dependency/major decision present)
-     - `data-model.md` (entities and lifecycle rules exist)
      - `contracts/` (API/domain contracts are introduced)
      - `test-spec.md` (feature test planning required)
    - Keep `/specify` focused on `spec.md` quality; do not pre-generate implementation-only docs here.
@@ -172,7 +174,7 @@ Given that feature description, do this:
       
       ## Notes
       
-      - Items marked incomplete require spec updates before `/clarify` or `/codify`
+- Items marked incomplete require spec updates before `/clarify`
       ```
 
    b. **Run Validation Check**: Review the spec against each checklist item:
@@ -238,7 +240,7 @@ Given that feature description, do this:
    ```
    - `feature_id` and `progress` are synchronized automatically from feature docs.
 
-8. Report completion with feature directory, spec file path, checklist results, and readiness for the next phase (`/clarify` or `/codify`) and pointer stage set to `specifying`. Include branch name only if created.
+8. Report completion with feature directory, spec file path, checklist results, and readiness for the next phase (`/clarify`) and pointer stage set to `specifying`. Include branch name only if created.
 
 **NOTE:** The script initializes `spec.md` under `<feature_dir>/docs/` only when missing. Branch creation is optional (`--create-branch`).
 
@@ -249,7 +251,7 @@ Given that feature description, do this:
 - Focus on **WHAT** users need and **WHY**.
 - Avoid HOW to implement (no tech stack, APIs, code structure).
 - Written for business stakeholders, not developers.
-- Keep UI behavior requirement-level only; do not include screen layout, component, or visual implementation detail. Screen-level abstraction is handled in `screen_abstraction.md` during `/codify`.
+- Keep UI behavior requirement-level only; do not include screen layout, component, or visual implementation detail. Screen-level abstraction is handled in `screen_abstraction.md` during `/clarify`.
 - Do not request or define concrete UI work; downstream implementation is controller/state contract-first.
 - DO NOT create any checklists that are embedded in the spec. That will be a separate command.
 

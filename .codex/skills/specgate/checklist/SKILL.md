@@ -70,7 +70,7 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Always end with an absolute path.
    - Run `.specify/scripts/bash/check-prerequisites.sh --json --paths-only --feature-dir "<abs path>"` from repo root and parse JSON for FEATURE_DIR and FEATURE_DOCS_DIR.
      - All file paths must be absolute.
-     - `code.md` may not exist yet during checklist-only workflows, so this step intentionally skips strict code-doc validation.
+     - `tasks.md` may not exist yet during checklist-only workflows, so this step intentionally skips strict code-doc validation.
      - For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
    - After successful completion, run:
      ```bash
@@ -80,7 +80,7 @@ You **MUST** consider the user input before proceeding (if not empty).
        --json
      ```
      - Refresh counters only. Do not transition stage in this supporting command.
-   - Priority notation in `code.md` is for implementation sequencing only.
+   - Priority notation in `tasks.md` is for implementation sequencing only.
      `/checklist` does not decide phase transitions or modify readiness state.
 
 2. **Clarify intent (dynamic)**: Derive up to THREE initial contextual clarifying questions (no pre-baked catalog). They MUST:
@@ -123,8 +123,8 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 4. **Load feature context**: Read from FEATURE_DOCS_DIR:
    - spec.md: Feature requirements and scope (required)
-   - code.md (if exists): Technical context and architecture constraints
-   - code.md#code-tasks (if exists): Execution queue and dependency ordering
+   - tasks.md (if exists): Technical context and architecture constraints
+   - tasks.md#code-tasks (if exists): Execution queue and dependency ordering
 
    **Context Loading Strategy**:
    - Load only necessary portions relevant to active focus areas (avoid full-file dumping)

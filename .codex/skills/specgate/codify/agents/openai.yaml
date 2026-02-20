@@ -1,6 +1,6 @@
 interface:
   display_name: "SpecGate: codify"
-  short_description: "Execute the implementation code-spec workflow using the code template to generate design artifacts. (SpecGate workflow)"
+  short_description: "Execute implementation from clarified artifacts (`tasks.md`, `data-model.md`, `screen_abstraction.md`, `quickstart.md`) after `/clarify`. (SpecGate workflow)"
   default_prompt: "Run the codify workflow from the SpecGate skill in the active feature context."
   brand_color: "#0EA5E9"
 policy:
