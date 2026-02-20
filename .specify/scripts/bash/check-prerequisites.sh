@@ -77,17 +77,12 @@ if [[ ! -f "$FEATURE_SPEC" ]]; then
     exit 1
 fi
 
-if [[ ! -f "$CODE_DOC" ]]; then
-    echo "ERROR: code.md not found in $FEATURE_DOCS_DIR" >&2
-    echo "Run /codify first to create the implementation code spec." >&2
-    exit 1
-fi
-
-docs=("spec.md" "code.md")
+docs=("spec.md")
 [[ -f "$RESEARCH" ]] && docs+=("research.md")
 [[ -f "$DATA_MODEL" ]] && docs+=("data-model.md")
 [[ -f "$QUICKSTART" ]] && docs+=("quickstart.md")
 [[ -f "$SCREEN_ABSTRACTION" ]] && docs+=("screen_abstraction.md")
+[[ -f "$CODE_DOC" ]] && docs+=("tasks.md")
 if [[ -d "$CONTRACTS_DIR" ]] && [[ -n "$(ls -A "$CONTRACTS_DIR" 2>/dev/null)" ]]; then
     docs+=("contracts/")
 fi

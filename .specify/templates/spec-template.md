@@ -133,4 +133,4 @@
 - Do not specify concrete widget/layout/style/animation implementation.
 - Keep requirements testable, measurable, and architecture-aware.
 - Move unresolved ambiguity to `clarify.md` and `## Clarifications` entries.
-- Keep implementation sequencing and task queues in `code.md`, not in this file.
+- Keep implementation sequencing and task queues in `tasks.md`, not in this file.

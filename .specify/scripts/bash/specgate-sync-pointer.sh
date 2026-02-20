@@ -252,7 +252,7 @@ feature_id_fallback = (
 feature_id = parse_feature_id(feature_dir, feature_id_fallback)
 
 code_counts = parse_task_counts(
-    Path(feature_dir) / "docs" / "code.md",
+    Path(feature_dir) / "docs" / "tasks.md",
     "code-tasks",
     "C",
 )
@@ -283,10 +283,10 @@ else:
 default_doc_by_stage = {
     "specifying": "spec.md",
     "clarifying": "spec.md",
-    "coding": "code.md",
+    "coding": "tasks.md",
     "test_planning": "test-spec.md",
     "test_writing": "test-spec.md",
-    "blocked": str(data.get("current_doc", "")).strip() or "code.md",
+    "blocked": str(data.get("current_doc", "")).strip() or "tasks.md",
     "done": "",
 }
 current_doc = (
@@ -298,7 +298,7 @@ current_doc = (
         else (
             str(data.get("current_doc", "")).strip()
             if preserve_stage and not stage_override and str(data.get("current_doc", "")).strip()
-            else default_doc_by_stage.get(stage, "code.md")
+            else default_doc_by_stage.get(stage, "tasks.md")
         )
     )
 )

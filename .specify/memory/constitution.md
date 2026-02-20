@@ -354,11 +354,11 @@ Spec-driven delivery in this repository MUST follow the `SpecGate` workflow:
    - Flat command UX is required: `/specify -> /clarify -> /codify -> /test-specify -> /test-codify`.
    - Compatibility aliases are not allowed in operational flow; use `SpecGate` only.
 
-2. **Required Feature Maintenance Artifacts**
+   2. **Required Feature Maintenance Artifacts**
    - Mandatory artifacts for each feature:
-     - `spec.md`, `code.md`, `screen_abstraction.md`, `quickstart.md`, `checklists/*`
+     - `spec.md`, `research.md`, `screen_abstraction.md`, `data-model.md`, `quickstart.md`, `tasks.md`, `checklists/*`
    - Conditional artifacts must be created when applicable:
-     - `research.md`, `data-model.md`, `contracts/`, `test-spec.md`
+     - `contracts/`, `test-spec.md`
 
 3. **Spec/Test Schema Gates**
    - Planning must not proceed if required `spec.md` sections are missing.

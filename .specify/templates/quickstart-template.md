@@ -2,7 +2,7 @@
 
 **Feature Directory**: `/path/to/feature`  
 **Spec**: `<feature_dir>/docs/spec.md`  
-**Plan**: `<feature_dir>/docs/code.md`  
+**Plan**: `<feature_dir>/docs/tasks.md`  
 **Screen Contracts**: `<feature_dir>/docs/screen_abstraction.md`  
 **Created**: [DATE]
 

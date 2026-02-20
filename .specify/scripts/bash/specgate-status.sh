@@ -188,7 +188,7 @@ if migrate:
         raise SystemExit(f"ERROR: feature_dir not found: {feature_dir}")
 
     code_counts = parse_task_counts(
-        feature_dir / "docs" / "code.md",
+        feature_dir / "docs" / "tasks.md",
         "code-tasks",
         "C",
     )
@@ -201,16 +201,16 @@ if migrate:
     stage = infer_stage(status, stage, code_counts, test_counts)
     current_doc = data.get("current_doc", "")
     if stage == "blocked" and not current_doc:
-        current_doc = "code.md"
+        current_doc = "tasks.md"
     elif stage != "done":
         current_doc = {
             "specifying": "spec.md",
             "clarifying": "spec.md",
-            "coding": "code.md",
+            "coding": "tasks.md",
             "test_planning": "test-spec.md",
             "test_writing": "test-spec.md",
             "done": "",
-            "blocked": current_doc or "code.md",
+            "blocked": current_doc or "tasks.md",
         }[stage]
 
     progress = {

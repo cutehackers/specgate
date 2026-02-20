@@ -87,7 +87,7 @@ get_feature_paths() {
     printf 'FEATURE_DIR=%q\n' "$feature_dir"
     printf 'FEATURE_DOCS_DIR=%q\n' "$feature_docs_dir"
     printf 'FEATURE_SPEC=%q\n' "$feature_docs_dir/spec.md"
-    printf 'CODE_DOC=%q\n' "$feature_docs_dir/code.md"
+    printf 'CODE_DOC=%q\n' "$feature_docs_dir/tasks.md"
     printf 'RESEARCH=%q\n' "$feature_docs_dir/research.md"
     printf 'DATA_MODEL=%q\n' "$feature_docs_dir/data-model.md"
     printf 'QUICKSTART=%q\n' "$feature_docs_dir/quickstart.md"

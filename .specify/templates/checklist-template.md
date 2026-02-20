@@ -13,8 +13,8 @@
   The /checklist command MUST replace these with actual items based on:
   - User's specific checklist request
   - Feature requirements from spec.md
-  - Technical context from code.md
-  - Implementation details from code.md (`## code-tasks`)
+  - Technical context from tasks.md
+  - Implementation details from tasks.md (`## code-tasks`)
   
   DO NOT keep these sample items in the generated checklist file.
   ============================================================================

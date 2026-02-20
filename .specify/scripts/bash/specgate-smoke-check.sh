@@ -47,14 +47,17 @@ required_files=(
     ".opencode/command/test-codify.md"
     ".opencode/command/feature-done.md"
     ".opencode/command/README.md"
-    ".codex/commands/specgate/feature-set.md"
-    ".codex/commands/specgate/specify.md"
-    ".codex/commands/specgate/clarify.md"
-    ".codex/commands/specgate/codify.md"
-    ".codex/commands/specgate/test-specify.md"
-    ".codex/commands/specgate/test-codify.md"
-    ".codex/commands/specgate/feature-done.md"
-    ".codex/commands/specgate/README.md"
+    ".codex/skills/specgate/feature-set/SKILL.md"
+    ".codex/skills/specgate/specify/SKILL.md"
+    ".codex/skills/specgate/clarify/SKILL.md"
+    ".codex/skills/specgate/codify/SKILL.md"
+    ".codex/skills/specgate/test-specify/SKILL.md"
+    ".codex/skills/specgate/test-codify/SKILL.md"
+    ".codex/skills/specgate/feature-done/SKILL.md"
+    ".codex/skills/specgate/analyze/SKILL.md"
+    ".codex/skills/specgate/checklist/SKILL.md"
+    ".codex/skills/specgate/constitution/SKILL.md"
+    ".codex/skills/specgate/taskstoissues/SKILL.md"
     ".claude/commands/specgate/README.md"
     ".specify/templates/spec-template.md"
     ".specify/templates/clarify-template.md"
@@ -93,11 +96,13 @@ repo_root = Path(sys.argv[2])
 
 data = json.loads(pointer_path.read_text(encoding="utf-8"))
 errors = []
+warnings = []
 
 feature_dir_raw = str(data.get("feature_dir", "")).strip()
 status = str(data.get("status", "")).strip()
 stage = str(data.get("stage", "")).strip()
 current_doc = str(data.get("current_doc", "")).strip()
+is_done_stage = status == "done"
 valid_statuses = {"in_progress", "done", "blocked"}
 valid_stages = {
     "specifying",
@@ -124,9 +129,21 @@ else:
     feature_dir = Path(feature_dir_raw).expanduser()
     if not feature_dir.is_absolute():
         feature_dir = (repo_root / feature_dir).resolve()
-
     if not feature_dir.is_dir():
-        errors.append(f"pointer feature_dir not found: {feature_dir}")
+        if str(feature_dir).startswith(f"{repo_root}"):
+            if is_done_stage:
+                warnings.extend(
+                    [
+                        f"pointer feature_dir missing for DONE state: {feature_dir}",
+                        "This is usually a stale pointer; run /feature-set before starting a new flow.",
+                    ]
+                )
+            else:
+                errors.append(f"pointer feature_dir not found: {feature_dir}")
+        else:
+            warnings.append(
+                f"pointer feature_dir points outside repo and is missing: {feature_dir}"
+            )
     else:
         docs_dir = feature_dir / "docs"
         docs_are_bootstrap_candidates = (
@@ -136,7 +153,15 @@ else:
         )
 
         if not docs_dir.is_dir():
-            errors.append(f"feature docs directory missing: {docs_dir}")
+            if is_done_stage:
+                warnings.append(f"pointer feature docs missing for DONE state: {docs_dir}")
+            else:
+                if str(docs_dir).startswith(f"{repo_root}"):
+                    errors.append(f"feature docs directory missing: {docs_dir}")
+                else:
+                    warnings.append(
+                        "active pointer references docs directory outside repo; run /feature-set or remove stale specs/feature-stage.local.json"
+                    )
         else:
             has_docs_artifacts = any(p.is_file() for p in docs_dir.rglob("*"))
             if docs_are_bootstrap_candidates and not has_docs_artifacts:
@@ -157,7 +182,7 @@ else:
                 stage_expected_doc = {
                     "specifying": "spec.md",
                     "clarifying": "spec.md",
-                    "coding": "code.md",
+                    "coding": "tasks.md",
                     "test_planning": "test-spec.md",
                     "test_writing": "test-spec.md",
                 }
@@ -177,6 +202,9 @@ if errors:
     for item in errors:
         print(item)
     raise SystemExit(1)
+if warnings:
+    for item in warnings:
+        print(f"WARN: {item}")
 PY
 then
     pass "active pointer feature docs integrity is valid"
@@ -197,7 +225,6 @@ legacy_paths=(
     ".opencode/command/tasks.md"
     ".opencode/command/tasks-test.md"
     ".opencode/command/implement.md"
-    ".codex/commands/specgate/implement.md"
 )
 
 for rel in "${legacy_paths[@]}"; do
@@ -236,7 +263,7 @@ done
 if rg -n "velospec" \
     "$REPO_ROOT/.claude/commands/specgate" \
     "$REPO_ROOT/.opencode/command" \
-    "$REPO_ROOT/.codex/commands/specgate" >"$TMP_OUTPUT"; then
+    "$REPO_ROOT/.codex/skills/specgate" >"$TMP_OUTPUT"; then
     fail "found 'velospec' reference in active SpecGate surfaces"
     cat "$TMP_OUTPUT" >&2
 else
@@ -246,7 +273,7 @@ fi
 if rg -n "agent:\\s*plan\\b" \
     "$REPO_ROOT/.claude/commands/specgate" \
     "$REPO_ROOT/.opencode/command" \
-    "$REPO_ROOT/.codex/commands/specgate" >"$TMP_OUTPUT"; then
+    "$REPO_ROOT/.codex/skills/specgate" >"$TMP_OUTPUT"; then
     fail "found deprecated plan handoff in active SpecGate command surfaces"
     cat "$TMP_OUTPUT" >&2
 else
@@ -257,7 +284,7 @@ if rg -n "/specgate/(feature-set|specify|clarify|codify|test-specify|test-codify
     "$REPO_ROOT/docs/SPECGATE.md" \
     "$REPO_ROOT/.claude/commands/specgate" \
     "$REPO_ROOT/.opencode/command" \
-    "$REPO_ROOT/.codex/commands/specgate" >"$TMP_OUTPUT"; then
+    "$REPO_ROOT/.codex/skills/specgate" >"$TMP_OUTPUT"; then
     fail "found mixed command invocation style (/specgate/...) in active docs"
     cat "$TMP_OUTPUT" >&2
 else
@@ -279,13 +306,6 @@ sync_required=(
     ".opencode/command/test-specify.md"
     ".opencode/command/test-codify.md"
     ".opencode/command/feature-done.md"
-    ".codex/commands/specgate/feature-set.md"
-    ".codex/commands/specgate/specify.md"
-    ".codex/commands/specgate/clarify.md"
-    ".codex/commands/specgate/codify.md"
-    ".codex/commands/specgate/test-specify.md"
-    ".codex/commands/specgate/test-codify.md"
-    ".codex/commands/specgate/feature-done.md"
 )
 
 for rel in "${sync_required[@]}"; do
@@ -300,7 +320,7 @@ done
 if rg -n "\"feature_dir\": \"/absolute/path/to/feature\"" \
     "$REPO_ROOT/.claude/commands/specgate" \
     "$REPO_ROOT/.opencode/command" \
-    "$REPO_ROOT/.codex/commands/specgate" >"$TMP_OUTPUT"; then
+    "$REPO_ROOT/.codex/skills/specgate" >"$TMP_OUTPUT"; then
     fail "manual pointer json example still present in active command surfaces"
     cat "$TMP_OUTPUT" >&2
 else
@@ -310,7 +330,7 @@ fi
 if rg -n "specgate-sync-pointer\\.sh --feature-dir \"<abs path>\" --json" \
     "$REPO_ROOT/.claude/commands/specgate" \
     "$REPO_ROOT/.opencode/command" \
-    "$REPO_ROOT/.codex/commands/specgate" >"$TMP_OUTPUT"; then
+    "$REPO_ROOT/.codex/skills/specgate" >"$TMP_OUTPUT"; then
     fail "pre-step sync must preserve phase (missing --preserve-stage)"
     cat "$TMP_OUTPUT" >&2
 else
@@ -322,8 +342,6 @@ supporting_sync_safe=(
     ".claude/commands/specgate/taskstoissues.md"
     ".opencode/command/checklist.md"
     ".opencode/command/taskstoissues.md"
-    ".codex/commands/specgate/checklist.md"
-    ".codex/commands/specgate/taskstoissues.md"
 )
 
 for rel in "${supporting_sync_safe[@]}"; do

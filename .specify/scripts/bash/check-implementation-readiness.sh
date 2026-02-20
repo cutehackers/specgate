@@ -44,7 +44,7 @@ source "$SCRIPT_DIR/common.sh"
 eval $(get_feature_paths "$FEATURE_DIR_ARG") || exit 1
 
 if [[ ! -f "$CODE_DOC" ]]; then
-    echo "ERROR: code.md not found: $CODE_DOC" >&2
+    echo "ERROR: tasks.md not found: $CODE_DOC" >&2
     exit 1
 fi
 

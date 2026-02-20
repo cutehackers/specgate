@@ -7,7 +7,7 @@
 - **Created**: [DATE]
 - **Updated**: [DATE]
 - **Spec**: `<feature_dir>/docs/spec.md`
-- **Code Spec**: `<feature_dir>/docs/code.md`
+- **Code Spec**: `<feature_dir>/docs/tasks.md`
 - **Architecture Baseline**: `docs/ARCHITECTURE.md`
 - **Testing Baseline**: `docs/TESTING_STANDARDS.md` (fallback: `.specify/memory/constitution.md`)
 

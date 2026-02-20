@@ -51,7 +51,7 @@
 
 - `screen_abstraction.md`
 - `quickstart.md`
-- `data-model.md` (if applicable)
+- `data-model.md`
 - `contracts/` (if applicable)
 - `contracts/mock/` or equivalent mock definition (required when `contracts/` exists)
 - `test-spec.md` (if test planning is required)
@@ -102,5 +102,5 @@ flutter test --coverage --no-pub
 
 ## Cleanup Policy
 
-- Keep: `spec.md`, `code.md`, `screen_abstraction.md`, `quickstart.md`, `checklists/*`, `test-spec.md` (if exists)
+- Keep: `spec.md`, `tasks.md`, `screen_abstraction.md`, `quickstart.md`, `checklists/*`, `test-spec.md` (if exists)
 - Removable at `feature-done`: `clarify.md`, `research.md`, temporary analysis notes

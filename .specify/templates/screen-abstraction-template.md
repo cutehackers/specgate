@@ -2,13 +2,13 @@
 
 **Feature Directory**: `/path/to/feature`  
 **Spec**: `<feature_dir>/docs/spec.md`  
-**Related Plan**: `<feature_dir>/docs/code.md`  
+**Related Plan**: `<feature_dir>/docs/tasks.md`  
 **Created**: [DATE]
 
 ## Purpose
 
 Define screen-level contracts only. This document is the source of truth for
-screen behavior contracts used by downstream `code.md` and `quickstart.md`.
+screen behavior contracts used by downstream `tasks.md` and `quickstart.md`.
 
 ## Global Guardrails
 

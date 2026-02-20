@@ -28,11 +28,16 @@ source "$SCRIPT_DIR/common.sh"
 eval $(get_feature_paths "$FEATURE_DIR_ARG") || exit 1
 
 if [[ ! -f "$CODE_DOC" ]]; then
-    echo "ERROR: code.md not found: $CODE_DOC" >&2
+    echo "ERROR: tasks.md not found: $CODE_DOC" >&2
     exit 1
 fi
 
-python3 - <<'PY' "$CODE_DOC" "$JSON_MODE" "$SCREEN_ABSTRACTION" "$QUICKSTART" "$CONTRACTS_DIR"
+if [[ ! -f "$DATA_MODEL" ]]; then
+    echo "ERROR: data-model.md not found: $DATA_MODEL" >&2
+    exit 1
+fi
+
+python3 - <<'PY' "$CODE_DOC" "$JSON_MODE" "$SCREEN_ABSTRACTION" "$QUICKSTART" "$DATA_MODEL" "$CONTRACTS_DIR"
 import json
 import re
 import sys
@@ -42,7 +47,8 @@ code_doc_path = Path(sys.argv[1])
 json_mode = sys.argv[2] == "true"
 screen_abstraction_path = Path(sys.argv[3]) if len(sys.argv) > 3 else None
 quickstart_path = Path(sys.argv[4]) if len(sys.argv) > 4 else None
-contracts_dir_path = Path(sys.argv[5]) if len(sys.argv) > 5 else None
+data_model_path = Path(sys.argv[5]) if len(sys.argv) > 5 else None
+contracts_dir_path = Path(sys.argv[6]) if len(sys.argv) > 6 else None
 text = code_doc_path.read_text(encoding="utf-8").replace("\r\n", "\n")
 
 
@@ -331,6 +337,7 @@ sections_to_scan = {
 artifact_checks = []
 parsed_screen, screen_text = parse_file_marked_sections(screen_abstraction_path)
 parsed_quickstart, quickstart_text = parse_file_marked_sections(quickstart_path)
+parsed_data_model, data_model_text = parse_file_marked_sections(data_model_path)
 
 if parsed_screen is None or not screen_text:
     artifact_checks.append("Missing required artifact: screen_abstraction.md")
@@ -356,6 +363,11 @@ else:
             artifact_checks.append(
                 f"quickstart.md missing section: {section_name}"
             )
+
+if parsed_data_model is None or not data_model_text:
+    artifact_checks.append("Missing required artifact: data-model.md")
+else:
+    sections_to_scan["DATA_MODEL_DOC"] = data_model_text
 
 
 def iter_scan_lines(text_block: str):
@@ -481,7 +493,7 @@ else:
 
 if not any(task_counts.values()):
     priority_issues.append(
-        "code.md # code-tasks has no priority-tagged tasks. "
+        "tasks.md # code-tasks has no priority-tagged tasks. "
         "Use [P1], [P2], or [P3], "
         "with [P2][BLOCKING] for blocking P2 tasks."
     )
@@ -545,7 +557,7 @@ else:
 
         if not has_mock_contract_task:
             parallel_strategy_issues.append(
-                "code.md # code-tasks must include at least one mock/contract task when contracts exist."
+                "tasks.md # code-tasks must include at least one mock/contract task when contracts exist."
             )
     else:
         # explicit NO/false declarations are valid when no contracts artifacts are present
@@ -598,9 +610,9 @@ if json_mode:
     print(json.dumps(result, ensure_ascii=False))
 else:
     if ok:
-        print(f"OK: code.md prerequisite gate passed ({code_doc_path})")
+        print(f"OK: tasks.md prerequisite gate passed ({code_doc_path})")
     else:
-        print("ERROR: code.md prerequisite gate failed:", file=sys.stderr)
+        print("ERROR: tasks.md prerequisite gate failed:", file=sys.stderr)
         if missing_sections:
             print("Missing sections:", file=sys.stderr)
             for section in missing_sections:
