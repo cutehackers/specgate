@@ -3,7 +3,7 @@
 SpecGate is the Spec-driven Development (SDD) workflow used by Claude, OpenCode, and Codex.
 It helps you move through one clear flow:
 
-`spec.md -> clarify.md(optional) -> code.md -> test-spec.md -> test-codify -> feature-done`
+`/specify -> /clarify -> /codify -> /test-specify -> /test-codify`
 
 This repository is the installation package only; after installation, work is done inside your project.
 
@@ -28,7 +28,7 @@ Then start using commands from your agent:
 
 - `/feature-set`
 - `/specify`
-- `/clarify` (optional)
+- `/clarify`
 - `/codify`
 - `/checklist`
 - `/analyze`
@@ -62,7 +62,7 @@ It is created when you run `/feature-set`.
 
 1. Run `/feature-set <feature-folder-path>`
 2. Run `/specify`
-3. Run `/clarify` (if needed)
+3. Run `/clarify`
 4. Run `/codify`
 5. Optionally run `/checklist` to validate requirement quality
 6. Run `/test-specify`
@@ -75,12 +75,17 @@ It is created when you run `/feature-set`.
 ### Where each command should end
 
 - `spec.md` and checklist sections from `/specify` should be complete for that feature.
-- `/codify` must include P1 items and all `[P2][BLOCKING]` items.
+- `/clarify` must generate `data-model.md`, `screen_abstraction.md`, `quickstart.md`, and refresh `tasks.md`.
+- `research.md` ownership is explicit:
+  - `/specify` creates and owns the baseline ambiguity/dependency record.
+  - `/clarify` may update `research.md` only when ambiguity resolution changes external assumptions or previously unresolved requirements.
+  - `/codify` must treat `research.md` as read-only implementation input.
+- `/codify` must implement all `tasks.md` P1 items and all `[P2][BLOCKING]` items.
 - `/checklist` should close with a completed checklist artifact and noted non-blocking improvements.
 - `/test-specify` creates a single test execution queue in `test-spec.md`.
 - `/test-codify` should consume that queue.
 - `/analyze` should output findings and next recommended command.
-- `/taskstoissues` should map only actionable `code.md` tasks to issue requests.
+- `/taskstoissues` should map only actionable `tasks.md` tasks to issue requests.
 - `/constitution` should keep templates and project policy aligned.
 - `/feature-done` should end after cleanup and validation.
 
@@ -102,7 +107,7 @@ Example:
 {
   "feature_dir": "/path/to/feature",
   "stage": "specifying|clarifying|coding|test_planning|test_writing|done|blocked",
-  "current_doc": "spec.md|code.md|test-spec.md",
+  "current_doc": "spec.md|tasks.md|test-spec.md",
   "progress": {
     "code": { "done": 0, "total": 8 },
     "test": { "done": 0, "total": 4 }
@@ -159,7 +164,7 @@ Suggested automation cadence:
 ## 7. Common mistakes (for beginners)
 
 - Do not use legacy command surfaces (`velospec`, `plan`, `tasks`, `tasks-test`) in this environment.
-- Do not put concrete Flutter widget or animation instructions into `code.md`/`test-spec.md`.
+- Do not put concrete Flutter widget or animation instructions into `tasks.md`/`test-spec.md`.
 - Do not write `clarify.md` after `/feature-done`.
 - If reinstalling into an existing project, use `--force` or remove target files first.
 

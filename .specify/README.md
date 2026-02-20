@@ -5,7 +5,7 @@ OpenCode for `SpecGate`.
 
 ## Key Directories
 
-- `templates/`: canonical artifact templates (`spec.md`, `code.md`,
+- `templates/`: canonical artifact templates (`spec.md`, `tasks.md`,
   `test-spec.md`, checklists)
 - `scripts/bash/`: stage checks, setup scripts, and status commands
 - `memory/`: constitution and workflow policy
@@ -26,7 +26,7 @@ OpenCode for `SpecGate`.
 
 ## Environment Notes
 
-- `check-implementation-readiness.sh` validates implementation queue readiness (`code.md#code-tasks`)
+- `check-implementation-readiness.sh` validates implementation queue readiness (`tasks.md#code-tasks`)
   and emits blocking-task diagnostics for `/codify` → `/test-specify` transitions.
 - `check-implementation-quality.sh` runs `dart format`, `flutter analyze`, and
   `flutter test`. If Flutter cache path is not writable
@@ -36,14 +36,22 @@ OpenCode for `SpecGate`.
 ## Core Templates
 
 - `templates/spec-template.md`
-- `templates/clarify-template.md` (`clarify.md`, temporary)
-- `templates/code-template.md`
+- `templates/clarify-template.md` (`clarify.md`, optional temporary session scratchpad)
+- `templates/code-template.md` (`tasks.md`)
+- `templates/screen-abstraction-template.md` (`screen_abstraction.md`)
+- `templates/quickstart-template.md` (`quickstart.md`)
 - `templates/test-spec-template.md` (`test-spec.md`)
-- `templates/screen-abstraction-template.md`
 
 ## Contract
 
-- Workflow: `spec.md -> clarify(optional) -> code.md -> test-spec.md`
+- Workflow: `/specify -> /clarify -> /codify -> /test-specify -> /test-codify`
+- Stage artifacts:
+  - `/specify`: `spec.md`, `research.md`
+    - `research.md` baseline ownership: `/specify` creates/owns initial notes, `/clarify` may refine only when ambiguity decisions or dependency assumptions change.
+  - `/clarify`: `data-model.md`, `screen_abstraction.md`, `quickstart.md`, `tasks.md`
+  - `/codify`: implementation in codebase, update `tasks.md`
+  - `/test-specify`: `test-spec.md`
+  - `/test-codify`: `test-spec.md#test-code`
 - FSM pointer: `specs/feature-stage.local.json`
 - Pointer auto-sync: `scripts/bash/specgate-sync-pointer.sh`
 - Pre-step sync rule: use `--preserve-stage` to avoid phase drift while refreshing counters.

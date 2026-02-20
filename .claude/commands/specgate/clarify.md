@@ -21,7 +21,8 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 Goal: Detect and reduce ambiguity or missing decision points in the active feature specification and record the clarifications directly in the spec file.
 
-Note: This clarification workflow is expected to run (and be completed) BEFORE invoking `/codify`. If the user explicitly states they are skipping clarification (e.g., exploratory spike), you may proceed, but must warn that downstream rework risk increases.
+Note: This clarification workflow is expected to run (and be completed) BEFORE invoking `/codify`.  
+This workflow now also owns planning artifact generation for `/clarify`: `screen_abstraction.md`, `data-model.md`, `quickstart.md`, and `tasks.md`.
 
 Execution steps:
 
@@ -59,6 +60,11 @@ to refresh pointer progress before clarification edits.
    - `FEATURE_DIR`
    - `FEATURE_DOCS_DIR`
    - `FEATURE_SPEC`
+   - `RESEARCH`
+   - `DATA_MODEL`
+   - `QUICKSTART`
+   - `SCREEN_ABSTRACTION`
+   - `CODE_DOC`
    - Derive `CLARIFY_DOC` as `<feature_dir>/docs/clarify.md`.
    - If JSON parsing fails, abort and instruct user to re-run `/specify` or verify feature docs environment.
    - For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
@@ -195,7 +201,20 @@ to refresh pointer progress before clarification edits.
     - Preserve formatting: do not reorder unrelated sections; keep heading hierarchy intact.
     - Keep each inserted clarification minimal and testable (avoid narrative drift).
 
-7. Validation (performed after EACH write plus final pass):
+7. Required planning artifact generation (must be executed even when no new clarification questions were needed):
+   - After clarifications are integrated in spec, ensure the following artifacts exist and are refreshed:
+     - `SCREEN_ABSTRACTION`: required screen contract abstraction from clarified spec/decisions.
+     - `DATA_MODEL`: required entity/lifecycle model aligned to spec constraints.
+     - `QUICKSTART`: required validation scenario document aligned to `screen_abstraction.md`.
+     - `CODE_DOC`: implementation queue in `tasks.md` updated to current plan and priorities.
+   - If artifacts already exist, update in place without losing completed task IDs and explicit task metadata.
+   - Use canonical templates from `.specify/templates/` when regenerating:
+     - `.specify/templates/screen-abstraction-template.md`
+     - `.specify/templates/quickstart-template.md`
+     - `.specify/templates/code-template.md`
+   - `data-model.md` and `screen_abstraction.md` are mandatory for every feature.
+
+8. Validation (performed after EACH write plus final pass):
    - Clarifications session contains exactly one bullet per accepted answer (no duplicates).
    - Total asked (accepted) questions ≤ 5.
    - Updated sections contain no lingering vague placeholders the new answer was meant to resolve.
@@ -203,8 +222,9 @@ to refresh pointer progress before clarification edits.
    - Markdown structure valid; only allowed new headings: `## Clarifications`, `### Session YYYY-MM-DD`.
    - Terminology consistency: same canonical term used across all updated sections.
 
-8. Write outputs:
+9. Write outputs:
    - Persist updated spec to `FEATURE_SPEC`.
+   - Persist/refresh `RESEARCH`, `SCREEN_ABSTRACTION`, `DATA_MODEL`, `QUICKSTART`, and `CODE_DOC`.
    - Persist/update the temporary clarification log to `CLARIFY_DOC`.
    - After successful completion, run:
      ```bash

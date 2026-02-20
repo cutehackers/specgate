@@ -6,7 +6,7 @@ This directory is the OpenCode command surface for `SpecGate`.
 
 1. `feature-set`
 2. `specify`
-3. `clarify` (optional)
+3. `clarify`
 4. `codify`
 5. `test-specify`
 6. `test-codify`
@@ -22,9 +22,9 @@ This directory is the OpenCode command surface for `SpecGate`.
 ## Operational Rules
 
 - Command invocation style is flat: `/feature-set`, `/specify`, `/clarify`, `/codify`, ...
-- Use `code.md#code-tasks` as the implementation queue.
+- Use `tasks.md#code-tasks` as the implementation queue.
 - Use `test-spec.md#test-code` as the test execution queue.
-- Keep progress in `code.md` and `test-spec.md` only.
+- Keep progress in `tasks.md` and `test-spec.md` only.
 - Read `specs/feature-stage.local.json` for current stage/doc/progress.
 - Sync pointer via `.specify/scripts/bash/specgate-sync-pointer.sh` at each phase boundary.
 - `checklist` and `taskstoissues` are optional support commands only; they do not

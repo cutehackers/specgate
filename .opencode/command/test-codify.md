@@ -25,7 +25,7 @@ You **MUST** consider the user input before proceeding (if not empty).
 **Read**:
 
 - `test-spec.md` (required)
-- `spec.md`, `code.md`, `data-model.md` (optional context)
+- `spec.md`, `tasks.md`, `data-model.md` (optional context)
 
 **Write**:
 

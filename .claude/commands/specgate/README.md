@@ -6,7 +6,7 @@ This directory is the canonical Claude command surface for `SpecGate`.
 
 1. `feature-set`
 2. `specify`
-3. `clarify` (optional)
+3. `clarify`
 4. `codify`
 5. `test-specify`
 6. `test-codify`
@@ -22,7 +22,7 @@ This directory is the canonical Claude command surface for `SpecGate`.
 ## Operational Rules
 
 - Command invocation style is flat: `/feature-set`, `/specify`, `/clarify`, `/codify`, ...
-- Keep implementation queue and progress in `code.md`.
+- Keep implementation queue and progress in `tasks.md`.
 - Keep test queue and progress in `test-spec.md`.
 - Use `specs/feature-stage.local.json` as the FSM source of truth.
 - Update pointer through `.specify/scripts/bash/specgate-sync-pointer.sh` at each phase boundary.

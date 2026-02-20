@@ -45,10 +45,10 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 4. **Apply feature-doc cleanup policy**:
    - Preserve mandatory maintenance docs:
-     - `spec.md`, `code.md`, `screen_abstraction.md`, `quickstart.md`, `checklists/*`
+     - `spec.md`, `tasks.md`, `screen_abstraction.md`, `quickstart.md`, `checklists/*`
    - Default removal targets (no extra prompt required):
      - `clarify.md` if all accepted decisions are already mirrored in `spec.md#Clarifications`
-     - `research.md` if no kept document references it (`spec.md`, `code.md`, `quickstart.md`, `data-model.md`, `test-spec.md`)
+     - `research.md` if no kept document references it (`spec.md`, `tasks.md`, `quickstart.md`, `data-model.md`, `test-spec.md`)
      - temporary notes under `docs/` matching `analysis*.md`, `tmp*.md`, `notes*.md`
    - Always keep unless the user explicitly requests deletion:
      - `data-model.md`, `contracts/`, `test-spec.md`

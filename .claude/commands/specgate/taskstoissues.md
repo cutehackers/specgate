@@ -44,9 +44,9 @@ You **MUST** consider the user input before proceeding (if not empty).
         - If `--feature-dir` is missing: ask for an absolute path via `AskUserQuestion`.
    - Always end with an absolute path.
    - Then run `.specify/scripts/bash/check-prerequisites.sh --json --paths-only --feature-dir "<abs path>"` from repo root and parse FEATURE_DIR and FEATURE_DOCS_DIR. All paths must be absolute.
-   - Validate that `<feature_dir>/docs/code.md` exists before proceeding:
+   - Validate that `<feature_dir>/docs/tasks.md` exists before proceeding:
      - If not found, fail with:
-       - `ERROR: code.md required for /taskstoissues`
+       - `ERROR: tasks.md required for /taskstoissues`
        - `Run /codify first to create implementation tasks before creating issues.`
      - For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
    - After successful completion, run:
@@ -57,11 +57,11 @@ You **MUST** consider the user input before proceeding (if not empty).
        --json
      ```
      - Refresh counters only. Do not transition stage in this supporting command.
-   1. Read `<feature_dir>/docs/code.md` and use `## code-tasks` as the
+   1. Read `<feature_dir>/docs/tasks.md` and use `## code-tasks` as the
       single issue source.
       - Issue creation targets unchecked actionable items only.
       - Ignore `OBSOLETE:` items.
-      - Priority tags in `code.md` are informative only here; this command never
+      - Priority tags in `tasks.md` are informative only here; this command never
         changes `/codify` readiness or phase gates.
    1. Get the Git remote by running:
 
@@ -82,7 +82,7 @@ You **MUST** consider the user input before proceeding (if not empty).
 
 Task source:
 
-- Parse `code.md` `## code-tasks` and target only unchecked tasks with task id prefix `C###`.
+- Parse `tasks.md` `## code-tasks` and target only unchecked tasks with task id prefix `C###`.
 - Keep the existing `P1/P2/P3` and `[P2][BLOCKING]` metadata:
   - `P1`: required baseline implementation tasks.
   - `P2-BLOCKING`: release-quality blockers; they block `/codify -> /test-specify` transitions in the workflow.
