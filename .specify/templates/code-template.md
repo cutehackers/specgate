@@ -8,6 +8,7 @@
 - **Updated**: [DATE]
 - **Spec Source**: `<feature_dir>/docs/spec.md`
 - **Architecture Baseline**: `docs/ARCHITECTURE.md`
+- **Naming Source**: `<resolved docs/ARCHITECTURE.md or constitution path>`
 
 ## Summary
 

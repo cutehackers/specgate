@@ -29,14 +29,15 @@ eval $(get_feature_paths "$FEATURE_DIR_ARG") || exit 1
 
 if [[ ! -f "$FEATURE_SPEC" ]]; then
     if $JSON_MODE; then
-        printf '{"ok":false,"spec":"%s","missing_sections":[],"empty_sections":[],"issue_messages":["spec.md not found"],"edge_case_count":0,"placeholder_tokens":[],"unresolved_clarifications":0,"concrete_ui_terms":[],"forbidden_naming_terms":[]}\n' "$FEATURE_SPEC"
+        printf '{"ok":false,"spec":"%s","naming_source":{"kind":"%s","file":"%s","reason":"%s"},"missing_sections":[],"empty_sections":[],"issue_messages":["spec.md not found"],"edge_case_count":0,"placeholder_tokens":[],"unresolved_clarifications":0,"concrete_ui_terms":[],"forbidden_naming_terms":[]}\n' \
+            "$FEATURE_SPEC" "$NAMING_SOURCE_KIND" "$NAMING_SOURCE_FILE" "$NAMING_SOURCE_REASON"
     else
         echo "ERROR: spec.md not found: $FEATURE_SPEC" >&2
     fi
     exit 1
 fi
 
-python3 - <<'PY' "$FEATURE_SPEC" "$JSON_MODE"
+python3 - <<'PY' "$FEATURE_SPEC" "$JSON_MODE" "$NAMING_SOURCE_KIND" "$NAMING_SOURCE_FILE" "$NAMING_SOURCE_REASON"
 import json
 import re
 import sys
@@ -44,6 +45,11 @@ from pathlib import Path
 
 spec_path = Path(sys.argv[1])
 json_mode = sys.argv[2] == "true"
+json_naming_source = {
+    "kind": sys.argv[3] if len(sys.argv) > 3 else "DEFAULT",
+    "file": sys.argv[4] if len(sys.argv) > 4 else "",
+    "reason": sys.argv[5] if len(sys.argv) > 5 else "No naming policy metadata provided.",
+}
 text = spec_path.read_text(encoding="utf-8").replace("\r\n", "\n")
 
 required_sections = [
@@ -247,6 +253,7 @@ ok = not (
 result = {
     "ok": ok,
     "spec": str(spec_path),
+    "naming_source": json_naming_source,
     "missing_sections": missing_sections,
     "empty_sections": empty_sections,
     "issue_messages": issue_messages,

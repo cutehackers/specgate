@@ -8,6 +8,7 @@
 - **Updated**: [DATE]
 - **Status**: Draft
 - **Architecture Baseline**: `docs/ARCHITECTURE.md`
+- **Naming Source**: `<resolved docs/ARCHITECTURE.md or constitution path>`
 - **Input**: "$ARGUMENTS"
 
 ## Problem Statement & Scope
@@ -97,7 +98,8 @@
 
 ## Architecture Compliance
 
-> Validate against `docs/ARCHITECTURE.md`.
+> Validate against resolved naming source:
+> `docs/ARCHITECTURE.md` (if naming section exists) or Constitution fallback.
 
 | Check | Status (PASS/OPEN) | Notes |
 |------|---------------------|-------|

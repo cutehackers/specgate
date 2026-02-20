@@ -37,7 +37,7 @@ if [[ ! -f "$DATA_MODEL" ]]; then
     exit 1
 fi
 
-python3 - <<'PY' "$CODE_DOC" "$JSON_MODE" "$SCREEN_ABSTRACTION" "$QUICKSTART" "$DATA_MODEL" "$CONTRACTS_DIR"
+python3 - <<'PY' "$CODE_DOC" "$JSON_MODE" "$SCREEN_ABSTRACTION" "$QUICKSTART" "$DATA_MODEL" "$CONTRACTS_DIR" "$NAMING_SOURCE_KIND" "$NAMING_SOURCE_FILE" "$NAMING_SOURCE_REASON"
 import json
 import re
 import sys
@@ -49,6 +49,11 @@ screen_abstraction_path = Path(sys.argv[3]) if len(sys.argv) > 3 else None
 quickstart_path = Path(sys.argv[4]) if len(sys.argv) > 4 else None
 data_model_path = Path(sys.argv[5]) if len(sys.argv) > 5 else None
 contracts_dir_path = Path(sys.argv[6]) if len(sys.argv) > 6 else None
+json_naming_source = {
+    "kind": sys.argv[7] if len(sys.argv) > 7 else "DEFAULT",
+    "file": sys.argv[8] if len(sys.argv) > 8 else "",
+    "reason": sys.argv[9] if len(sys.argv) > 9 else "No naming policy metadata provided.",
+}
 text = code_doc_path.read_text(encoding="utf-8").replace("\r\n", "\n")
 
 
@@ -585,6 +590,7 @@ ok = (
 result = {
     "ok": ok,
     "code_doc": str(code_doc_path),
+    "naming_source": json_naming_source,
     "missing_sections": missing_sections,
     "artifact_errors": artifact_checks,
     "contracts_detected": contracts_detected,

@@ -215,6 +215,7 @@ clean_branch_name() {
 # to searching for repository markers so the workflow still functions in repositories that
 # were initialised with --no-git.
 SCRIPT_DIR="$(CDPATH="" cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/common.sh"
 
 if git rev-parse --show-toplevel >/dev/null 2>&1; then
     REPO_ROOT=$(git rev-parse --show-toplevel)
@@ -231,6 +232,16 @@ fi
 cd "$REPO_ROOT"
 
 SPECS_DIR="$REPO_ROOT/specs"
+NAMING_SOURCE_VALUE=""
+NAMING_SOURCE_KIND="DEFAULT"
+NAMING_SOURCE_FILE=""
+NAMING_SOURCE_REASON="No usable naming policy found; repository default naming guardrails apply."
+resolve_naming_source "$FEATURE_DIR" "$REPO_ROOT"
+if [[ -n "$NAMING_SOURCE_FILE" ]]; then
+    NAMING_SOURCE_VALUE="$NAMING_SOURCE_KIND: ${NAMING_SOURCE_FILE}"
+else
+    NAMING_SOURCE_VALUE="$NAMING_SOURCE_KIND: repository default naming guardrails"
+fi
 
 # Function to generate branch name with stop word filtering and length filtering
 generate_branch_name() {
@@ -351,6 +362,22 @@ if [ -f "$SPEC_FILE" ]; then
     SPEC_INITIALIZED=false
 elif [ -f "$TEMPLATE" ]; then
     cp "$TEMPLATE" "$SPEC_FILE"
+    if command -v python3 >/dev/null 2>&1; then
+        python3 - "$SPEC_FILE" "$NAMING_SOURCE_VALUE" <<'PY'
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+target = sys.argv[2]
+text = path.read_text(encoding="utf-8")
+lines = text.splitlines()
+for i, line in enumerate(lines):
+    if line.startswith("- **Naming Source**:"):
+        lines[i] = f"- **Naming Source**: {target}"
+        break
+path.write_text("\n".join(lines) + ("\n" if text.endswith("\n") else ""), encoding="utf-8")
+PY
+    fi
     SPEC_INITIALIZED=true
 else
     touch "$SPEC_FILE"
@@ -361,8 +388,8 @@ fi
 export SPECIFY_FEATURE_DIR="$FEATURE_DIR"
 
 if $JSON_MODE; then
-    printf '{"FEATURE_DIR":"%s","FEATURE_DOCS_DIR":"%s","FEATURE_ID":"%s","SPEC_FILE":"%s","BRANCH_NAME":"%s","FEATURE_NUM":"%s","SPEC_INITIALIZED":%s}\n' \
-        "$FEATURE_DIR" "$FEATURE_DOCS_DIR" "$FEATURE_ID" "$SPEC_FILE" "$BRANCH_NAME" "$FEATURE_NUM" "$SPEC_INITIALIZED"
+    printf '{"FEATURE_DIR":"%s","FEATURE_DOCS_DIR":"%s","FEATURE_ID":"%s","SPEC_FILE":"%s","BRANCH_NAME":"%s","FEATURE_NUM":"%s","SPEC_INITIALIZED":%s,"NAMING_SOURCE_KIND":"%s","NAMING_SOURCE_FILE":"%s","NAMING_SOURCE_REASON":"%s"}\n' \
+        "$FEATURE_DIR" "$FEATURE_DOCS_DIR" "$FEATURE_ID" "$SPEC_FILE" "$BRANCH_NAME" "$FEATURE_NUM" "$SPEC_INITIALIZED" "$NAMING_SOURCE_KIND" "$NAMING_SOURCE_FILE" "$NAMING_SOURCE_REASON"
 else
     if $CREATE_BRANCH; then
         echo "BRANCH_NAME: $BRANCH_NAME"
@@ -373,5 +400,8 @@ else
     echo "FEATURE_ID: $FEATURE_ID"
     echo "SPEC_FILE: $SPEC_FILE"
     echo "SPEC_INITIALIZED: $SPEC_INITIALIZED"
+    echo "NAMING_SOURCE_KIND: $NAMING_SOURCE_KIND"
+    echo "NAMING_SOURCE_FILE: $NAMING_SOURCE_FILE"
+    echo "NAMING_SOURCE_REASON: $NAMING_SOURCE_REASON"
     echo "SPECIFY_FEATURE_DIR environment variable set to: $FEATURE_DIR"
 fi

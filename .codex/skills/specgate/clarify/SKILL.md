@@ -62,6 +62,21 @@ Then run:
 ```
 to refresh pointer progress before clarification edits.
 
+1.1 **Resolve naming policy source**:
+   - Let `FEATURE_DIR` be the resolved absolute feature directory.
+   - Use this precedence order:
+     1. `<FEATURE_DIR>/docs/ARCHITECTURE.md` or `<FEATURE_DIR>/docs/architecture.md` if it contains at least one usable naming section:
+        - heading is one of `Naming Rules`, `Naming Convention`, `Naming Policy`
+        - heading matches `^#{1,4}\s*Naming\s+(Rules|Convention|Policy)\s*$` (case-insensitive)
+        - section includes non-empty concrete lines (excluding comments/placeholders/blank lines)
+     2. If missing or unusable, fallback to:
+        - `<FEATURE_DIR>/docs/constitution.md`
+        - `<FEATURE_DIR>/constitution.md`
+        - `<REPO_ROOT>/.specify/memory/constitution.md`
+     3. If neither has usable naming policy, use existing repo default naming guardrails.
+   - Do not fail for missing architecture naming rules; proceed with fallback and record the chosen source.
+   - Keep `NAMING_SOURCE_FILE` in workflow context for final report and artifact updates.
+
 2. Run `.specify/scripts/bash/check-prerequisites.sh --json --paths-only --feature-dir "<abs path>"` from repo root **once** (combined `--json --paths-only` mode / `-Json -PathsOnly`). Parse minimal JSON payload fields:
    - `FEATURE_DIR`
    - `FEATURE_DOCS_DIR`
@@ -124,6 +139,7 @@ to refresh pointer progress before clarification edits.
    Terminology & Consistency:
    - Canonical glossary terms
    - Avoided synonyms / deprecated terms
+   - Naming policy source and entity/event naming consistency between spec, data model, and screen contracts
 
    Completion Signals:
    - Acceptance criteria testability
@@ -201,6 +217,7 @@ to refresh pointer progress before clarification edits.
        - Non-functional constraint → Add/modify measurable criteria in Non-Functional / Quality Attributes section (convert vague adjective to metric or explicit target).
        - Edge case / negative flow → Add a new bullet under Edge Cases / Error Handling (or create such subsection if template provides placeholder for it).
        - Terminology conflict → Normalize term across spec; retain original only if necessary by adding `(formerly referred to as "X")` once.
+       - Naming conflict → Normalize entity/event/screen identifiers to resolved naming policy across all touched sections and planning artifacts.
        - Concrete UI phrasing found in related section → Rewrite to abstraction wording that preserves behavior intent and removes visual/layout/style/animation instructions.
     - If the clarification invalidates an earlier ambiguous statement, replace that statement instead of duplicating; leave no obsolete contradictory text.
     - Save the spec file AFTER each integration to minimize risk of context loss (atomic overwrite).
@@ -227,6 +244,7 @@ to refresh pointer progress before clarification edits.
    - No contradictory earlier statement remains (scan for now-invalid alternative choices removed).
    - Markdown structure valid; only allowed new headings: `## Clarifications`, `### Session YYYY-MM-DD`.
    - Terminology consistency: same canonical term used across all updated sections.
+   - Naming policy consistency: touched sections align on naming source selected in step 1.1.
 
 9. Write outputs:
    - Persist updated spec to `FEATURE_SPEC`.
@@ -248,6 +266,7 @@ to refresh pointer progress before clarification edits.
    - Path to updated spec.
    - Path to updated `clarify.md` log.
    - Sections touched (list names).
+   - Naming source selected (`ARCHITECTURE`/`CONSTITUTION`/`DEFAULT`) and resolved file path.
    - Coverage summary table listing each taxonomy category with Status: Resolved (was Partial/Missing and addressed), Deferred (exceeds question quota or better suited for planning), Clear (already sufficient), Outstanding (still Partial/Missing but low impact).
    - If any Outstanding or Deferred remain, recommend whether to proceed to `/codify` or run `/clarify` again later.
    - Suggested next command.

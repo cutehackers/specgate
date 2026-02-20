@@ -52,6 +52,18 @@ Default execution flow: `/specify` -> `/clarify` -> `/codify` -> `/test-specify`
      .specify/scripts/bash/specgate-sync-pointer.sh --feature-dir "<abs path>" --preserve-stage --json
      ```
      to refresh pointer progress before implementation.
+   - Resolve naming policy source for coding checks:
+     1. `<FEATURE_DIR>/docs/ARCHITECTURE.md` 또는 `<FEATURE_DIR>/docs/architecture.md`에서 아래 중 하나의 제목이 있고 실사용 가능한 규칙이 있으면 사용:
+        - `Naming Rules`
+        - `Naming Convention`
+        - `Naming Policy`
+        - 정규식: `^#{1,4}\s*Naming\s+(Rules|Convention|Policy)\s*$` (대소문자 무시)
+     2. 위 조건이 없으면 fallback:
+        - `<FEATURE_DIR>/docs/constitution.md`
+        - `<FEATURE_DIR>/constitution.md`
+        - `<REPO_ROOT>/.specify/memory/constitution.md`
+     3. 모두 없으면 기본 repository 네이밍 가드레일 사용.
+   - 결과를 `NAMING_SOURCE_FILE`로 보관한다.
    - Then run `.specify/scripts/bash/setup-code.sh --json --feature-dir "<abs path>"` from repo root and parse JSON for FEATURE_SPEC, CODE_DOC, FEATURE_DIR, FEATURE_DOCS_DIR.
    - Resolve required artifact paths from FEATURE_DOCS_DIR:
      - `DATA_MODEL=<FEATURE_DOCS_DIR>/data-model.md`
@@ -72,7 +84,7 @@ Default execution flow: `/specify` -> `/clarify` -> `/codify` -> `/test-specify`
 
 2. **Run spec gate**: Execute `.specify/scripts/bash/check-spec-prerequisites.sh --feature-dir "<abs path>"` and stop on failure.
 
-3. **Load context**: Read FEATURE_SPEC and `.specify/memory/constitution.md`. Read planning outputs from `specify/clarify` stage as implementation source:
+3. **Load context**: Read FEATURE_SPEC and resolved naming policy source (from step 1). Read planning outputs from `specify/clarify` stage as implementation source:
    - `RESEARCH` (informational decisions)
    - `DATA_MODEL`
    - `SCREEN_ABSTRACTION`
@@ -86,6 +98,8 @@ Default execution flow: `/specify` -> `/clarify` -> `/codify` -> `/test-specify`
      - screen `event` must exist in data-model related context
      - user stories in `spec.md` must be represented by at least one screen contract
    - Confirm `quickstart.md` has executable validation scenarios.
+   - Confirm implemented naming identifiers align with resolved naming source:
+     - entity names, events, screen IDs, and task naming conventions follow the selected policy.
 
 4. **Execute implementation from tasks.md**:
    - `/codify` does not generate/overwrite planning artifacts; it must only consume `screen_abstraction.md`, `data-model.md`, `quickstart.md`, and `tasks.md` to implement code and tests.
@@ -106,7 +120,8 @@ Default execution flow: `/specify` -> `/clarify` -> `/codify` -> `/test-specify`
 
 6. **Run code gate**: Execute `.specify/scripts/bash/check-code-prerequisites.sh --feature-dir "<abs path>"` and stop on failure.
 
-7. **Stop and report**: Report feature directory, CODE_DOC path, executed task IDs, test results, and confirm pointer is in `coding` stage (`current_doc: tasks.md`).
+7. **Stop and report**: Report feature directory, CODE_DOC path, executed task IDs, test results, naming source, and confirm pointer is in `coding` stage (`current_doc: tasks.md`).
+   - Include naming source category (`ARCHITECTURE`/`CONSTITUTION`/`DEFAULT`) and path for traceability.
 
 ## Phases
 
@@ -116,7 +131,8 @@ Default execution flow: `/specify` -> `/clarify` -> `/codify` -> `/test-specify`
   - `screen_abstraction.md` event/output contracts
   - `data-model.md` entities and transitions
   - `quickstart.md` validation scenarios
-- Reject implementation if contract mapping is missing.
+  - Naming policy source applied to implemented identifiers
+- Reject implementation if contract mapping or naming alignment is missing.
 
 ### Phase 1: Implementation execution
 

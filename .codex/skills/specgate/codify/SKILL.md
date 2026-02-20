@@ -55,6 +55,19 @@ Default execution flow: `/specify` -> `/clarify` -> `/codify` -> `/test-specify`
      .specify/scripts/bash/specgate-sync-pointer.sh --feature-dir "<abs path>" --preserve-stage --json
      ```
      to refresh pointer progress before implementation.
+   - Resolve naming policy source for coding checks:
+     1. `<FEATURE_DIR>/docs/ARCHITECTURE.md` or `<FEATURE_DIR>/docs/architecture.md` if it contains a usable section headed by one of:
+        - `Naming Rules`
+        - `Naming Convention`
+        - `Naming Policy`
+        - Heading regex: `^#{1,4}\s*Naming\s+(Rules|Convention|Policy)\s*$` (case-insensitive)
+        - Section must have substantive rule content
+     2. If absent/unusable, fallback to:
+        - `<FEATURE_DIR>/docs/constitution.md`
+        - `<FEATURE_DIR>/constitution.md`
+        - `<REPO_ROOT>/.specify/memory/constitution.md`
+     3. If neither has usable guidance, use existing repository default naming guardrails.
+     - Store result as `NAMING_SOURCE_FILE` for use in implementation trace checks.
    - Then run `.specify/scripts/bash/setup-code.sh --json --feature-dir "<abs path>"` from repo root and parse JSON for FEATURE_SPEC, CODE_DOC, FEATURE_DIR, FEATURE_DOCS_DIR.
    - Resolve required artifact paths from FEATURE_DOCS_DIR:
      - `DATA_MODEL=<FEATURE_DOCS_DIR>/data-model.md`
@@ -75,12 +88,13 @@ Default execution flow: `/specify` -> `/clarify` -> `/codify` -> `/test-specify`
 
 2. **Run spec gate**: Execute `.specify/scripts/bash/check-spec-prerequisites.sh --feature-dir "<abs path>"` and stop on failure.
 
-3. **Load context**: Read FEATURE_SPEC and `.specify/memory/constitution.md`. Read planning outputs from `specify/clarify` stage as implementation source:
+3. **Load context**: Read FEATURE_SPEC and resolved naming policy source (from step 1.1). Read planning outputs from `specify/clarify` stage as implementation source:
    - `RESEARCH` (informational decisions)
    - `DATA_MODEL`
    - `SCREEN_ABSTRACTION`
    - `QUICKSTART`
    - `CODE_DOC` (`tasks.md`)
+   - If `NAMING_SOURCE_FILE` is `DEFAULT`, record `Architecture Baseline` fallback note in execution log before coding.
 
 3.1 **Implementation artifact gate (required before coding)**:
    - If any of `DATA_MODEL`, `SCREEN_ABSTRACTION`, `QUICKSTART`, or `CODE_DOC` is missing/empty, **STOP** and ask for `/clarify`.
@@ -89,6 +103,9 @@ Default execution flow: `/specify` -> `/clarify` -> `/codify` -> `/test-specify`
      - screen `event` must exist in data-model related context
      - user stories in `spec.md` must be represented by at least one screen contract
    - Confirm `quickstart.md` has executable validation scenarios.
+   - Confirm implemented naming identifiers align with resolved naming source:
+     - entity names, events, screen IDs, and repository/task naming follow the selected naming policy
+     - any conflict found should block implementation and route to `/clarify`.
 
 4. **Execute implementation from tasks.md**:
    - `/codify` does not generate/overwrite planning artifacts; it must only consume `screen_abstraction.md`, `data-model.md`, `quickstart.md`, and `tasks.md` to implement code and tests.
@@ -109,7 +126,7 @@ Default execution flow: `/specify` -> `/clarify` -> `/codify` -> `/test-specify`
 
 6. **Run code gate**: Execute `.specify/scripts/bash/check-code-prerequisites.sh --feature-dir "<abs path>"` and stop on failure.
 
-7. **Stop and report**: Report feature directory, CODE_DOC path, executed task IDs, test results, and confirm pointer is in `coding` stage (`current_doc: tasks.md`).
+7. **Stop and report**: Report feature directory, CODE_DOC path, executed task IDs, test results, naming source (`ARCHITECTURE`/`CONSTITUTION`/`DEFAULT` + path), and confirm pointer is in `coding` stage (`current_doc: tasks.md`).
 
 ## Phases
 
@@ -119,7 +136,7 @@ Default execution flow: `/specify` -> `/clarify` -> `/codify` -> `/test-specify`
   - `screen_abstraction.md` event/output contracts
   - `data-model.md` entities and transitions
   - `quickstart.md` validation scenarios
-- Reject implementation if contract mapping is missing.
+- Reject implementation if contract mapping or naming alignment is missing.
 
 ### Phase 1: Implementation execution
 

@@ -57,6 +57,21 @@ Given that feature description, do this:
      ```
      This refreshes progress counters before editing docs.
 
+1.1 **Resolve naming policy source**:
+   - Let `FEATURE_DIR` be the resolved absolute feature directory.
+   - Determine `NAMING_SOURCE_FILE` using this precedence order:
+     1. `<FEATURE_DIR>/docs/ARCHITECTURE.md` or `<FEATURE_DIR>/docs/architecture.md` only if it contains a usable naming section:
+        - heading is one of `Naming Rules`, `Naming Convention`, `Naming Policy`
+        - heading matches `^#{1,4}\s*Naming\s+(Rules|Convention|Policy)\s*$` (case-insensitive)
+        - the section has at least one concrete, non-placeholder rule line
+     2. If no usable section, fallback to:
+        - `<FEATURE_DIR>/docs/constitution.md`
+        - `<FEATURE_DIR>/constitution.md`
+        - `<REPO_ROOT>/.specify/memory/constitution.md`
+     3. If none found, use repository default naming guardrails enforced by current SpecGate checks.
+   - Do not fail when architecture naming section is absent; proceed with Constitution fallback and log the final resolved source.
+   - Record the selected source in workflow context for later steps (`ARCHITECTURE`, `CONSTITUTION`, `DEFAULT`).
+
 2. **Optional branch creation** (only if `--create-branch` is present):
    - Generate a concise short name (2-4 words) for the branch:
      - Analyze the feature description and extract the most meaningful keywords
@@ -83,6 +98,7 @@ Given that feature description, do this:
      - The script is idempotent for spec seeding and MUST NOT overwrite an existing `spec.md`
      - Re-running is allowed when continuing the same feature; preserve existing spec content
      - The JSON output will contain FEATURE_DIR, FEATURE_DOCS_DIR, FEATURE_ID, SPEC_FILE, and optionally BRANCH_NAME
+     - Naming source metadata is now also available in the JSON output: NAMING_SOURCE_KIND, NAMING_SOURCE_FILE, NAMING_SOURCE_REASON.
      - For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot")
 
 4. Load `.specify/templates/spec-template.md` to understand required sections.
@@ -133,6 +149,10 @@ Given that feature description, do this:
 5. Write or update SPEC_FILE in an idempotent way:
    - If SPEC_FILE does not exist: create it from the template structure and replace placeholders with concrete details from the feature description.
    - If SPEC_FILE already exists: update in place only where needed, preserving existing confirmed content and section structure (no destructive rewrite).
+   - Ensure spec metadata records resolved naming source:
+     - `Architecture Baseline` (existing metadata field)
+     - `Naming Source` with policy category and file path used (`ARCHITECTURE`/`CONSTITUTION`/`DEFAULT`)
+   - If a source is fallbacked, add the reason briefly in `Architecture Compliance`.
 
 6. **Specification Quality Validation**: After writing the initial spec, validate it against quality criteria:
 
@@ -241,6 +261,7 @@ Given that feature description, do this:
    - `feature_id` and `progress` are synchronized automatically from feature docs.
 
 8. Report completion with feature directory, spec file path, checklist results, and readiness for the next phase (`/clarify`) and pointer stage set to `specifying`. Include branch name only if created.
+   - Include naming source resolution summary: selected file path, source category, and whether architecture naming section was used.
 
 **NOTE:** The script initializes `spec.md` under `<feature_dir>/docs/` only when missing. Branch creation is optional (`--create-branch`).
 
