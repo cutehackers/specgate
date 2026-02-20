@@ -15,13 +15,20 @@ Install into current directory:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
-bash /tmp/specgate-install.sh --prefix .
+bash /tmp/specgate-install.sh --ai claude --prefix .
 ```
 
 Verify files:
 
 ```bash
 ls -la .specify .claude .codex .opencode
+```
+
+If install is affected by a partially broken previous install, run:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
+bash /tmp/specgate-install.sh --clean --ai claude --prefix .
 ```
 
 Then start using commands from your agent:
@@ -58,7 +65,28 @@ It is created when you run `/feature-set`.
 
 ---
 
-## 3. Standard workflow (first time)
+## 3. Install options (from install.sh)
+
+```text
+--prefix <path>     Install target directory (default: .)
+--dry-run           Show plan only; no files are changed
+--force             Overwrite existing target files/directories
+--clean             Remove selected SpecGate assets and reinstall
+--version <name>    Install from branch/tag (default: main)
+--ai <list>         Install scope
+--agent <list>      Alias for --ai
+--codex-target <project|home>  Where to install Codex Agent Skills when --ai includes codex (default: project)
+--uninstall         Remove SpecGate assets instead of installing
+```
+
+Tips:
+
+- `--clean` is the recommended reset mode for an interrupted or partial install.
+- Empty directories in target locations are treated as empty install targets and are replaced automatically.
+
+---
+
+## 4. Standard workflow (first time)
 
 1. Run `/feature-set <feature-folder-path>`
 2. Run `/specify`
@@ -95,7 +123,7 @@ If a step fails:
 
 ---
 
-## 4. Pointer file (state tracking)
+## 5. Pointer file (state tracking)
 
 SpecGate stores current flow state in:
 
@@ -123,7 +151,7 @@ Use the following when needed:
 
 ---
 
-## 5. Quality gates (recommended)
+## 6. Quality gates (recommended)
 
 Run in project root after commands (or before merging):
 
@@ -146,7 +174,7 @@ Tip: `specgate-smoke-check.sh` is kept as an installation validation script, not
 
 Tip: if your environment blocks some tools, use fallback options documented in the scripts.
 
-## 6. Codex automation candidates (optional)
+## 7. Codex automation candidates (optional)
 
 For Codex users, the most stable automation candidates are:
 
@@ -161,7 +189,7 @@ Suggested automation cadence:
 
 ---
 
-## 7. Common mistakes (for beginners)
+## 8. Common mistakes (for beginners)
 
 - Do not use legacy command surfaces (`velospec`, `plan`, `tasks`, `tasks-test`) in this environment.
 - Do not put concrete Flutter widget or animation instructions into `tasks.md`/`test-spec.md`.
@@ -170,7 +198,7 @@ Suggested automation cadence:
 
 ---
 
-## 8. Uninstall
+## 9. Uninstall
 
 If needed:
 
