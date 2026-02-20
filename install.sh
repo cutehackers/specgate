@@ -13,6 +13,7 @@ fi
 PREFIX="."
 DRY_RUN=0
 FORCE=0
+CLEAN=0
 UNINSTALL=0
 VERSION="main"
 REPO_URL="${REPO_URL:-https://github.com/cutehackers/specgate}"
@@ -52,6 +53,7 @@ Options:
   --prefix <path>    Install target directory (default: .)
   --dry-run          Show planned file operations without writing files
   --force            Overwrite existing files/directories
+  --clean            Remove selected SpecGate assets before install
   --uninstall        Remove SpecGate files from the target directory
   --version <name>    Ref to install when downloading (default: main)
   --ai <list>        Agents to install (comma-separated). Supported: all, claude, codex, opencode
@@ -110,6 +112,10 @@ case "$1" in
       ;;
     --force)
       FORCE=1
+      shift
+      ;;
+    --clean)
+      CLEAN=1
       shift
       ;;
     --uninstall)
@@ -357,6 +363,25 @@ fi
 
 SCRIPT_SOURCE_DIR="$(resolve_script_source)"
 
+if (( CLEAN == 1 )); then
+  echo "Cleaning selected SpecGate assets in $TARGET_DIR"
+  for asset in "${ASSETS[@]}"; do
+    remove_item "$asset"
+  done
+  if (( SELECTED_CODEX == 1 )) && [[ "$CODEX_TARGET_MODE" == "home" ]]; then
+    if [[ -z "${HOME:-}" ]]; then
+      echo "HOME is required when --codex-target home is used." >&2
+      exit 1
+    fi
+    previous_target_dir="${TARGET_DIR}"
+    TARGET_DIR="${HOME}"
+    for asset in "${CODEX_SKILL_ASSETS[@]}"; do
+      remove_item "$asset"
+    done
+    TARGET_DIR="${previous_target_dir}"
+  fi
+fi
+
 copy_item() {
   local rel_path="$1"
   local source_path="$SCRIPT_SOURCE_DIR/$rel_path"
@@ -368,7 +393,7 @@ copy_item() {
     return 0
   fi
 
-  if [[ -e "$target_path" ]]; then
+  if [[ -e "$target_path" ]] && ! (( CLEAN == 1 && DRY_RUN == 1 )); then
     if (( FORCE == 0 )); then
       if is_empty_dir "$target_path" && [[ -d "$source_path" ]]; then
         rm -rf "$target_path"

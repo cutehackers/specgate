@@ -113,6 +113,7 @@ curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.s
 --prefix <경로>             설치 대상 디렉토리 (기본값: .)
 --dry-run                   실행 계획만 출력, 실제 파일은 변경하지 않음
 --force                     기존 파일 덮어쓰기 허용
+--clean                     기존 SpecGate 설치 자산을 삭제하고 재설치
 --version <이름>            브랜치/태그 지정 (기본값: main)
 --ai <목록>                 설치할 에이전트 범위
 --agent <목록>              --ai 별칭
@@ -125,6 +126,12 @@ curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.s
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
 bash /tmp/specgate-install.sh --dry-run --ai codex --codex-target project --prefix .
+```
+
+```bash
+# 깨진/일부로 남은 기존 설치를 초기 상태로 재설치
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
+bash /tmp/specgate-install.sh --clean --ai claude --prefix .
 ```
 
 ```bash

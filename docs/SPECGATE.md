@@ -166,7 +166,7 @@ Suggested automation cadence:
 - Do not use legacy command surfaces (`velospec`, `plan`, `tasks`, `tasks-test`) in this environment.
 - Do not put concrete Flutter widget or animation instructions into `tasks.md`/`test-spec.md`.
 - Do not write `clarify.md` after `/feature-done`.
-- If reinstalling into an existing project, use `--force` or remove target files first.
+- If reinstalling into an existing project, use `--clean` (or `--force` for backup-before-reinstall behavior).
 
 ---
 

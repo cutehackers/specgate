@@ -112,6 +112,7 @@ Supported values: `all`, `claude`, `codex`, `opencode`.
 --prefix <path>     Install target directory (default: .)
 --dry-run           Show plan only; no files are changed
 --force             Overwrite existing target files/directories
+--clean             Remove selected SpecGate assets and reinstall
 --version <name>    Install from branch/tag (default: main)
 --ai <list>         Install scope
 --agent <list>      Alias for --ai
@@ -124,6 +125,12 @@ Supported values: `all`, `claude`, `codex`, `opencode`.
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
 bash /tmp/specgate-install.sh --dry-run --ai codex --codex-target project --prefix .
+```
+
+```bash
+# Reset a broken or partial existing install in place
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
+bash /tmp/specgate-install.sh --clean --ai claude --prefix .
 ```
 
 ```bash
