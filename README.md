@@ -20,6 +20,17 @@ Install directly into your project without cloning.
   - `/constitution`
   - `/feature-done`
 
+## Standard feature pipeline
+
+- `/specify -> /clarify -> /codify -> /test-specify -> /test-codify`
+- `/specify` must produce `spec.md`, `research.md`.
+- `/clarify` must produce and maintain all of: `data-model.md`, `screen_abstraction.md`, `quickstart.md`, `tasks.md`.
+- `/codify` must only implement code from the `/clarify` artifacts and `tasks.md`.
+- `/test-specify` then `/test-codify` consume `test-spec.md` artifacts.
+- `specs/feature-stage.local.json` is the local run-time pointer.
+  - It is created in consumer projects by `/feature-set`.
+  - It is intentionally excluded from this package distribution.
+
 ## 1) Quick start
 
 Install SpecGate:

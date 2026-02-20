@@ -20,6 +20,17 @@ Claude, OpenCode, Codex에서 사용할 수 있는 명령과 스크립트를 제
   - `/constitution`
   - `/feature-done`
 
+## 기본 피처 운영 흐름
+
+- `/specify -> /clarify -> /codify -> /test-specify -> /test-codify`
+- `/specify`은 `spec.md`, `research.md`를 생성/갱신합니다.
+- `/clarify`는 반드시 `data-model.md`, `screen_abstraction.md`, `quickstart.md`, `tasks.md`를 생성하고 갱신합니다.
+- `/codify`는 `/clarify` 산출물과 `tasks.md` 기반으로 구현만 수행해야 합니다.
+- `/test-specify`와 `/test-codify`는 `test-spec.md`를 각각 생성/실행합니다.
+- `specs/feature-stage.local.json`은 로컬 실행 상태 포인터입니다.
+  - 소비자 프로젝트에서 `/feature-set` 실행 시 생성됩니다.
+  - 패키지 배포본에는 포함하지 않습니다.
+
 ## 1) 빠른 시작
 
 SpecGate 설치:
