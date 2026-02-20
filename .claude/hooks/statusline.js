@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @specgate-managed:statusline
 // Claude Code Statusline - SpecGate Edition
 // Shows: model | current task | stage | directory | context usage
 

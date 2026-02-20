@@ -15,6 +15,7 @@ DRY_RUN=0
 FORCE=0
 CLEAN=0
 UNINSTALL=0
+UPDATE=0
 VERSION="main"
 REPO_URL="${REPO_URL:-https://github.com/cutehackers/specgate}"
 SCRIPT_SOURCE_DIR=""
@@ -42,6 +43,8 @@ OPENCODE_ASSETS=(
 ASSETS=()
 SELECTED_AGENTS=()
 SELECTED_CODEX=0
+STATUSLINE_PATH=".claude/hooks/statusline.js"
+SPECGATE_STATUSLINE_MARKER="# @specgate-managed:statusline"
 
 print_usage() {
   cat <<'USAGE'
@@ -53,6 +56,7 @@ Options:
   --prefix <path>    Install target directory (default: .)
   --dry-run          Show planned file operations without writing files
   --force            Overwrite existing files/directories
+  --update           Update existing SpecGate files in-place (no backup; skips unchanged)
   --clean            Remove selected SpecGate assets before install
   --uninstall        Remove SpecGate files from the target directory
   --version <name>    Ref to install when downloading (default: main)
@@ -112,6 +116,10 @@ case "$1" in
       ;;
     --force)
       FORCE=1
+      shift
+      ;;
+    --update)
+      UPDATE=1
       shift
       ;;
     --clean)
@@ -226,6 +234,14 @@ has_local_assets() {
   return 0
 }
 
+is_specgate_managed_statusline() {
+  local target_path="$1"
+  [[ -f "$target_path" ]] && {
+    grep -qF "${SPECGATE_STATUSLINE_MARKER}" "$target_path" || \
+    grep -qF "Claude Code Statusline - SpecGate Edition" "$target_path"
+  }
+}
+
 cleanup_tmp() {
   if [[ -n "${TMP_DIR}" ]] && [[ -d "${TMP_DIR}" ]]; then
     rm -rf "${TMP_DIR}"
@@ -318,6 +334,11 @@ remove_item() {
     return 0
   fi
 
+  if [[ "$rel_path" == "$STATUSLINE_PATH" ]] && ! is_specgate_managed_statusline "$target_path"; then
+    echo "SKIP: $rel_path is user-managed"
+    return 0
+  fi
+
   if (( DRY_RUN == 1 )); then
     echo "DRY-RUN: would remove $rel_path"
     return 0
@@ -337,6 +358,11 @@ remove_item() {
 }
 
 if (( UNINSTALL == 1 )); then
+  if (( UPDATE == 1 )); then
+    echo "Cannot use --update with --uninstall"
+    exit 1
+  fi
+
   echo "Uninstalling SpecGate from $TARGET_DIR"
   echo "Target agents: ${SELECTED_AGENTS_LABEL}"
   for asset in "${ASSETS[@]}"; do
@@ -359,6 +385,16 @@ if (( UNINSTALL == 1 )); then
 
   echo "Uninstallation completed."
   exit 0
+fi
+
+if (( UPDATE == 1 && CLEAN == 1 )); then
+  echo "Cannot use --update with --clean"
+  exit 1
+fi
+
+if (( UPDATE == 1 && FORCE == 1 )); then
+  echo "Cannot use --update with --force"
+  exit 1
 fi
 
 SCRIPT_SOURCE_DIR="$(resolve_script_source)"
@@ -386,10 +422,14 @@ copy_item() {
   local rel_path="$1"
   local source_path="$SCRIPT_SOURCE_DIR/$rel_path"
   local target_path="$TARGET_DIR/$rel_path"
-  local ts
 
   if [[ ! -e "$source_path" ]]; then
     echo "SKIP: missing source $rel_path"
+    return 0
+  fi
+
+  if [[ "$rel_path" == "$STATUSLINE_PATH" ]] && [[ -f "$target_path" ]] && ! is_specgate_managed_statusline "$target_path"; then
+    echo "SKIP: $rel_path is user-managed"
     return 0
   fi
 
@@ -402,12 +442,10 @@ copy_item() {
         return 0
       fi
     else
-      ts="$(date +%Y%m%d-%H%M%S)"
       if (( DRY_RUN == 1 )); then
-        echo "DRY-RUN: would backup existing $rel_path -> $rel_path.backup-$ts"
+        echo "DRY-RUN: would replace existing $rel_path"
       else
-        mv "$target_path" "$target_path.backup-$ts"
-        echo "Backed up existing $rel_path"
+        rm -rf "$target_path"
       fi
     fi
   fi
@@ -422,10 +460,136 @@ copy_item() {
   echo "Installed: $rel_path"
 }
 
-echo "Installing SpecGate into $TARGET_DIR"
+asset_has_changes() {
+  local source_path="$1"
+  local target_path="$2"
+
+  if [[ -L "$source_path" ]]; then
+    if [[ ! -L "$target_path" ]]; then
+      return 1
+    fi
+    if [[ "$(readlink "$source_path")" == "$(readlink "$target_path" 2>/dev/null)" ]]; then
+      return 0
+    fi
+    return 1
+  fi
+
+  if [[ -f "$source_path" ]]; then
+    if [[ ! -f "$target_path" ]]; then
+      return 1
+    fi
+    cmp -s "$source_path" "$target_path"
+    if (( $? == 0 )); then
+      return 0
+    fi
+    return 1
+  fi
+
+  return 1
+}
+
+update_item() {
+  local rel_path="$1"
+  local source_path="$SCRIPT_SOURCE_DIR/$rel_path"
+  local target_path="$TARGET_DIR/$rel_path"
+  local updated_files=0
+  local src_file
+  local rel
+  local target_file
+
+  if [[ ! -e "$source_path" ]]; then
+    echo "SKIP: missing source $rel_path"
+    return 0
+  fi
+
+  if [[ "$rel_path" == "$STATUSLINE_PATH" ]] && [[ -f "$target_path" ]] && ! is_specgate_managed_statusline "$target_path"; then
+    echo "SKIP: $rel_path is user-managed"
+    return 0
+  fi
+
+  if [[ -d "$source_path" ]]; then
+    if [[ -d "$target_path" ]]; then
+      while IFS= read -r -d '' src_file; do
+        rel="${src_file#${source_path}/}"
+        target_file="$target_path/$rel"
+        if ! asset_has_changes "$src_file" "$target_file"; then
+          if (( DRY_RUN == 1 )); then
+            echo "DRY-RUN: would update $rel_path/$rel"
+          else
+            mkdir -p "$(dirname "$target_file")"
+            if [[ -e "$target_file" ]]; then
+              rm -rf "$target_file"
+            fi
+            cp -a "$src_file" "$target_file"
+          fi
+          ((updated_files += 1))
+        fi
+      done < <(find "$source_path" \( -type f -o -type l \) -print0)
+
+      if (( DRY_RUN == 1 )); then
+        if (( updated_files == 0 )); then
+          echo "DRY-RUN: $rel_path already up to date"
+        else
+          echo "DRY-RUN: would update $rel_path ($updated_files files)"
+        fi
+        return 0
+      fi
+
+      if (( updated_files == 0 )); then
+        echo "SKIP: $rel_path is already up to date"
+      else
+        echo "Updated: $rel_path ($updated_files files)"
+      fi
+      return 0
+    fi
+
+    if (( DRY_RUN == 1 )); then
+      echo "DRY-RUN: would install $rel_path"
+      return 0
+    fi
+    if [[ -e "$target_path" ]]; then
+      rm -rf "$target_path"
+    fi
+    mkdir -p "$(dirname "$target_path")"
+    cp -a "$source_path" "$target_path"
+    echo "Installed: $rel_path"
+    return 0
+  fi
+
+  if ! asset_has_changes "$source_path" "$target_path"; then
+    if (( DRY_RUN == 1 )); then
+      echo "DRY-RUN: would update $rel_path"
+      return 0
+    fi
+    if [[ -e "$target_path" ]]; then
+      rm -rf "$target_path"
+    fi
+    mkdir -p "$(dirname "$target_path")"
+    cp -a "$source_path" "$target_path"
+    echo "Updated: $rel_path"
+    return 0
+  fi
+
+  if (( DRY_RUN == 1 )); then
+    echo "DRY-RUN: $rel_path is already up to date"
+    return 0
+  fi
+
+  echo "SKIP: $rel_path is already up to date"
+}
+
+if (( UPDATE == 1 )); then
+  echo "Updating SpecGate in $TARGET_DIR"
+else
+  echo "Installing SpecGate into $TARGET_DIR"
+fi
 echo "Target agents: ${SELECTED_AGENTS_LABEL}"
 for asset in "${ASSETS[@]}"; do
-  copy_item "$asset"
+  if (( UPDATE == 1 )); then
+    update_item "$asset"
+  else
+    copy_item "$asset"
+  fi
 done
 if (( SELECTED_CODEX == 1 )) && [[ "$CODEX_TARGET_MODE" == "home" ]]; then
   if [[ -z "${HOME:-}" ]]; then
@@ -435,7 +599,11 @@ if (( SELECTED_CODEX == 1 )) && [[ "$CODEX_TARGET_MODE" == "home" ]]; then
   previous_target_dir="${TARGET_DIR}"
   TARGET_DIR="${HOME}"
   for asset in "${CODEX_SKILL_ASSETS[@]}"; do
-    copy_item "$asset"
+    if (( UPDATE == 1 )); then
+      update_item "$asset"
+    else
+      copy_item "$asset"
+    fi
   done
   TARGET_DIR="${previous_target_dir}"
 fi

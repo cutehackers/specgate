@@ -70,7 +70,8 @@ It is created when you run `/feature-set`.
 ```text
 --prefix <path>     Install target directory (default: .)
 --dry-run           Show plan only; no files are changed
---force             Overwrite existing target files/directories
+--force             Overwrite existing target files/directories (no backup)
+--update            Update only changed files in-place (no backup files)
 --clean             Remove selected SpecGate assets and reinstall
 --version <name>    Install from branch/tag (default: main)
 --ai <list>         Install scope
@@ -79,9 +80,14 @@ It is created when you run `/feature-set`.
 --uninstall         Remove SpecGate assets instead of installing
 ```
 
+Notes:
+- install, uninstall, clean, and update operations do not generate backup files.
+- `--update` is idempotent for unchanged files: it skips files that have not changed.
+
 Tips:
 
 - `--clean` is the recommended reset mode for an interrupted or partial install.
+- `--update` is the recommended mode for updating changed files without reinstalling.
 - Empty directories in target locations are treated as empty install targets and are replaced automatically.
 
 ---
@@ -194,7 +200,7 @@ Suggested automation cadence:
 - Do not use legacy command surfaces (`velospec`, `plan`, `tasks`, `tasks-test`) in this environment.
 - Do not put concrete Flutter widget or animation instructions into `tasks.md`/`test-spec.md`.
 - Do not write `clarify.md` after `/feature-done`.
-- If reinstalling into an existing project, use `--clean` (or `--force` for backup-before-reinstall behavior).
+- If reinstalling into an existing project, use `--clean` (or `--force` for overwrite without backup).
 
 ---
 
@@ -213,3 +219,6 @@ To remove one agent only:
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
 bash /tmp/specgate-install.sh --uninstall --ai claude --prefix .
 ```
+
+`statusline.js` is only removed when it is identified as a SpecGate-owned file to avoid deleting custom statusline scripts from other tools.
+`--update` also only updates `statusline.js` when it is a SpecGate-owned file.

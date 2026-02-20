@@ -112,7 +112,8 @@ curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.s
 ```text
 --prefix <경로>             설치 대상 디렉토리 (기본값: .)
 --dry-run                   실행 계획만 출력, 실제 파일은 변경하지 않음
---force                     기존 파일 덮어쓰기 허용
+--force                     기존 파일 덮어쓰기 허용 (백업 파일 생성 없음)
+--update                    변경된 파일만 갱신 (백업 파일 생성 없음)
 --clean                     기존 SpecGate 설치 자산을 삭제하고 재설치
 --version <이름>            브랜치/태그 지정 (기본값: main)
 --ai <목록>                 설치할 에이전트 범위
@@ -120,6 +121,10 @@ curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.s
 --codex-target <project|home> Codex Agent Skills 설치 위치 (기본값: project)
 --uninstall                 설치 대신 제거 모드로 동작
 ```
+
+참고:
+- install, uninstall, clean, update 동작 모두 백업 파일을 생성하지 않습니다.
+- `--update`는 반복 실행해도 안전합니다. 변경되지 않은 파일은 건너뛰고 변경된 파일만 갱신됩니다.
 
 ### 예시
 
@@ -132,6 +137,12 @@ bash /tmp/specgate-install.sh --dry-run --ai codex --codex-target project --pref
 # 깨진/일부로 남은 기존 설치를 초기 상태로 재설치
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
 bash /tmp/specgate-install.sh --clean --ai claude --prefix .
+```
+
+```bash
+# 변경 파일만 덮어쓰기
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
+bash /tmp/specgate-install.sh --update --ai claude --prefix .
 ```
 
 ```bash
@@ -159,12 +170,15 @@ bash /tmp/specgate-install.sh --uninstall --ai claude --prefix .
 ```bash
 [ ! -d .specify ] \
   && [ ! -d .claude/commands/specgate ] \
-  && [ ! -f .claude/hooks/statusline.js ] \
+  && ( [ ! -f .claude/hooks/statusline.js ] || ! (grep -qF "# @specgate-managed:statusline" .claude/hooks/statusline.js || grep -qF "Claude Code Statusline - SpecGate Edition" .claude/hooks/statusline.js) ) \
   && [ ! -d .codex/skills/specgate ] \
   && [ ! -d .opencode/command ] \
   && [ ! -f docs/SPECGATE.md ] \
   && echo "SpecGate assets removed."
 ```
+
+`statusline.js`는 다른 도구의 커스텀 스크립트일 수 있으므로, SpecGate가 설치한 파일로 판별되는 경우에만 삭제합니다.
+`--update`도 `statusline.js`에 대해 SpecGate 소유 마커가 있는 경우에만 갱신합니다.
 
 Codex 홈 스코프 설치를 해 둔 경우:
 
