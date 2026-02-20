@@ -6,7 +6,7 @@ It provides command surfaces and scripts for Claude, OpenCode, and Codex.
 Install directly into your project without cloning.
 
 - Default install path: current directory (`.`)
-- Default scope: all agents (`claude`, `codex`, `opencode`)
+- Default scope: all agents (`all` by default). Single-agent install is recommended below.
 - Entry points:
   - `/feature-set`
   - `/specify`
@@ -26,59 +26,75 @@ Install SpecGate:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
-bash /tmp/specgate-install.sh --prefix .
+bash /tmp/specgate-install.sh --ai claude --prefix .
 ```
 
 Verify:
 
 ```bash
-ls -la .specify .claude .codex .opencode
+ls -la .specify .claude
 ```
 
-You should see the folders for your selected agents.
+You should see the folders for your selected agent.
 For Codex, run workflows via `.codex/skills/specgate/<workflow>/SKILL.md` directly.  
 If a workflow needs additional input, ask it directly in the Codex chat (do not rely on `AskUserQuestion`).
 
 ## 2) Install modes
 
-### Remote install (all agents, default)
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
-bash /tmp/specgate-install.sh --prefix .
-```
-
-### Install selected agents
+### Remote install (single agent)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
 bash /tmp/specgate-install.sh --ai claude --prefix .
 ```
 
+### Install by agent (single agent)
+
+Common first step (run once):
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
-# Install Codex skill under project: .codex/skills/specgate
+```
+
+1) Claude only
+
+```bash
+bash /tmp/specgate-install.sh --ai claude --prefix .
+```
+
+2) Opencode only
+
+```bash
+bash /tmp/specgate-install.sh --ai opencode --prefix .
+```
+
+3) Codex in project scope (default for project install)
+
+```bash
 bash /tmp/specgate-install.sh --ai codex --codex-target project --prefix .
 ```
 
+4) Codex in home scope (shared across projects)
+
 ```bash
-curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
-# Install Codex skill under Codex home: ~/.codex/skills/specgate
 bash /tmp/specgate-install.sh --ai codex --codex-target home --prefix .
 ```
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
-bash /tmp/specgate-install.sh --ai claude,opencode --prefix .
-```
+### Installation mapping guide (single agent)
+
+- Claude: install target becomes `.claude/commands/specgate/*`.
+- Opencode: install target becomes `.opencode/command/*`.
+- Codex + `--codex-target project`: `.codex/skills/specgate/*`.
+- Codex + `--codex-target home`: `~/.codex/skills/specgate/*` (shared by projects).
 
 `--ai` and `--agent` are aliases.
 Supported values: `all`, `claude`, `codex`, `opencode`.
+(`--ai all` is not recommended for this guide, use one agent per install.)
 
 ### Install from local clone
 
 ```bash
-/path/to/specgate/install.sh --prefix .
+/path/to/specgate/install.sh --ai claude --prefix .
 ```
 
 ## 3) Install options
@@ -113,11 +129,35 @@ curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.s
 bash /tmp/specgate-install.sh --uninstall --prefix .
 ```
 
-Remove only one agent:
+`--uninstall` without `--ai` removes all agents by default.
+To remove only one agent:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
 bash /tmp/specgate-install.sh --uninstall --ai claude --prefix .
+```
+
+Verify removal of all SpecGate assets:
+
+```bash
+[ ! -d .specify ] \
+  && [ ! -d .claude/commands/specgate ] \
+  && [ ! -f .claude/hooks/statusline.js ] \
+  && [ ! -d .codex/skills/specgate ] \
+  && [ ! -d .opencode/command ] \
+  && [ ! -f docs/SPECGATE.md ] \
+  && echo "SpecGate assets removed."
+```
+
+If you installed Codex in home scope, remove with:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
+bash /tmp/specgate-install.sh --uninstall --ai codex --codex-target home --prefix .
+```
+
+```bash
+[ ! -d ~/.codex/skills/specgate ] && echo "Codex home skills removed."
 ```
 
 ## 5) Installed assets
