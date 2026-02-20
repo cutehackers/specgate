@@ -227,6 +227,16 @@ cleanup_tmp() {
 }
 trap cleanup_tmp EXIT
 
+is_empty_dir() {
+  local dir_path="$1"
+  if [[ ! -d "$dir_path" ]]; then
+    return 1
+  fi
+  local first_entry
+  first_entry="$(find "$dir_path" -mindepth 1 -print -quit 2>/dev/null || true)"
+  [[ -z "$first_entry" ]]
+}
+
 resolve_remote_archive() {
   local candidate
   local archive_url
@@ -360,16 +370,20 @@ copy_item() {
 
   if [[ -e "$target_path" ]]; then
     if (( FORCE == 0 )); then
-      echo "SKIP: $rel_path already exists (use --force)"
-      return 0
-    fi
-
-    ts="$(date +%Y%m%d-%H%M%S)"
-    if (( DRY_RUN == 1 )); then
-      echo "DRY-RUN: would backup existing $rel_path -> $rel_path.backup-$ts"
+      if is_empty_dir "$target_path" && [[ -d "$source_path" ]]; then
+        rm -rf "$target_path"
+      else
+        echo "SKIP: $rel_path already exists (use --force)"
+        return 0
+      fi
     else
-      mv "$target_path" "$target_path.backup-$ts"
-      echo "Backed up existing $rel_path"
+      ts="$(date +%Y%m%d-%H%M%S)"
+      if (( DRY_RUN == 1 )); then
+        echo "DRY-RUN: would backup existing $rel_path -> $rel_path.backup-$ts"
+      else
+        mv "$target_path" "$target_path.backup-$ts"
+        echo "Backed up existing $rel_path"
+      fi
     fi
   fi
 
