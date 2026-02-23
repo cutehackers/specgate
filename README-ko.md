@@ -31,28 +31,105 @@ Claude, OpenCode, Codex에서 사용할 수 있는 명령과 스크립트를 제
   - 소비자 프로젝트에서 `/feature-set` 실행 시 생성됩니다.
   - 패키지 배포본에는 포함하지 않습니다.
 
-## 1) 빠른 시작
+## 1) 초보자용 빠른 설치 (권장)
 
-SpecGate 설치:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
-bash /tmp/specgate-install.sh --preset claude --prefix .
-```
-
-설치 확인:
+### 옵션 A) 단일 에이전트 설치
 
 ```bash
-ls -la .specify .claude
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh \
+  | bash -s -- --preset [claude|opencode|codex|codex-home] --prefix .
 ```
 
-선택한 에이전트에 맞는 폴더가 보이면 설치가 완료된 것입니다.
-Codex는 각 워크플로우를 `.codex/skills/specgate/<workflow>/SKILL.md`로 직접 실행합니다.  
+에이전트 하나를 선택해 아래 중 하나 실행:
+
+- Claude:
+
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh \
+    | bash -s -- --preset claude --prefix .
+  ```
+
+- Opencode:
+
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh \
+    | bash -s -- --preset opencode --prefix .
+  ```
+
+- Codex(프로젝트 스코프):
+
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh \
+    | bash -s -- --preset codex --prefix .
+  ```
+
+- Codex(홈 스코프):
+
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh \
+    | bash -s -- --preset codex-home --prefix .
+  ```
+
+### 옵션 B) 여러 에이전트를 함께 설치
+
+`--ai`에 쉼표로 여러 에이전트를 지정하세요.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh \
+  | bash -s -- --ai claude,opencode --prefix .
+
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh \
+  | bash -s -- --ai claude,opencode,codex --prefix .
+
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh \
+  | bash -s -- --ai claude,opencode,codex --codex-target home --prefix .
+```
+
+단일 preset 값:
+
+```text
+claude, opencode, codex, codex-home, all
+```
+
+### 1.3 업데이트 / 삭제
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh \
+  | bash -s -- --update --preset claude --prefix .
+
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh \
+  | bash -s -- --uninstall --preset claude --prefix .
+```
+
+### 1.4 설치 확인
+
+```bash
+ls -la .specify .claude .codex .opencode
+```
+
+설치가 깨졌거나 잘 안될 때:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh \
+  | bash -s -- --dry-run --preset claude --prefix .
+
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh \
+  | bash -s -- --clean --preset claude --prefix .
+```
+
+로컬 레포에서 실행할 때:
+
+```bash
+bash /path/to/specgate/install.sh --preset claude --prefix .
+```
+
+선택한 에이전트의 폴더가 보이면 설치가 완료된 것입니다.
+Codex는 각 워크플로우를 `.codex/skills/specgate/<workflow>/SKILL.md`로 직접 실행합니다.
 워크플로우 진행 중 사용자 입력이 필요하면 `AskUserQuestion`이 아닌 채팅에서 직접 질문하고 답변을 기다리세요.
 
-## 2) 에이전트별 사용법: 설치 → 업데이트 → 삭제
+## 2) 고급: 에이전트별 사용법 참조
 
-에이전트 유형을 먼저 정한 뒤, 아래 3단계만 기억하면 됩니다.
+에이전트 유형을 먼저 정한 뒤, 아래 3단계만 기억하면 됩니다. (설치|업데이트|삭제)
 
 ### Claude
 
@@ -100,7 +177,7 @@ bash /tmp/specgate-install.sh --update --preset codex-home --prefix .
 bash /tmp/specgate-install.sh --uninstall --preset codex-home --prefix .
 ```
 
-## 3) 설치 방식
+## 3) 고급 설치 방식
 
 ### 원격 설치 (단일 에이전트)
 
@@ -152,7 +229,6 @@ bash /tmp/specgate-install.sh --uninstall --ai claude,opencode --prefix .
 `--ai`와 `--agent`는 같은 옵션입니다.
 지원 값: `all`, `claude`, `codex`, `opencode`.
 (`--ai all`은 전체 에이전트 자산 전체를 설치합니다.)
-
 
 ### 설치 매핑 가이드
 

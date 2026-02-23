@@ -53,18 +53,25 @@ Usage: install.sh [options]
 Install SpecGate into a consumer project.
 
 Options:
-  --prefix <path>    Install target directory (default: .)
-  --dry-run          Show planned file operations without writing files
-  --force            Overwrite existing files/directories
-  --update           Update existing SpecGate files in-place (no backup; skips unchanged)
-  --clean            Remove selected SpecGate assets before install
-  --uninstall        Remove SpecGate files from the target directory
+  --prefix <path>     Install target directory (default: .)
+  --dry-run           Show planned file operations without writing files
+  --force             Overwrite existing files/directories
+  --update            Update existing SpecGate files in-place (no backup; skips unchanged)
+  --clean             Remove selected SpecGate assets before install
+  --uninstall         Remove SpecGate files from the target directory
   --version <name>    Ref to install when downloading (default: main)
   --preset <name>     Predefined install profile. Supported: claude, opencode, codex, codex-home, all
-  --ai <list>        Agents to install (comma-separated). Supported: all, claude, codex, opencode
-  --agent <list>     Alias for --ai
+  --ai <list>         Agents to install (comma-separated). Supported: all, claude, codex, opencode
+  --agent <list>      Alias for --ai
   --codex-target <project|home>  Where to install Codex Agent Skills when --ai includes codex (default: project)
-  -h, --help         Show this help
+  -h, --help          Show this help
+
+Examples:
+  curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh \
+    | bash -s -- --preset claude --prefix .
+  bash install.sh --preset claude --prefix .
+  bash install.sh --update --preset claude --prefix .
+  bash install.sh --uninstall --preset claude --prefix .
 USAGE
 }
 

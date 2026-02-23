@@ -9,6 +9,24 @@ This repository is the installation package only; after installation, work is do
 
 ---
 
+## 0. Advanced install guide (main package reference)
+
+This file contains detailed install details and standard workflow notes.
+
+If you are a new user, use the top-level quick-start section in:
+
+- [`README.md`](../README.md) (English)
+- [`README-ko.md`](../README-ko.md) (Korean)
+
+If you want one-command examples without section headers, use:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh \
+  | bash -s -- --preset claude --prefix .
+```
+
+Continue with the sections below for multi-agent mapping, options matrix, and edge cases.
+
 ## 1. Quick installation check
 
 Install into current directory:
