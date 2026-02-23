@@ -109,46 +109,59 @@ curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.s
 bash /tmp/specgate-install.sh --preset claude --prefix .
 ```
 
-### 에이전트별 단일 설치 가이드
+### 에이전트 조합 설치 가이드
 
-1. Claude만 설치
+여러 에이전트를 한 번에 설치하려면 다음처럼 `--ai`로 묶어 쓰면 됩니다.
+
+1. Claude + Opencode
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh \
-  && bash /tmp/specgate-install.sh --preset claude --prefix .
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
+bash /tmp/specgate-install.sh --ai claude,opencode --prefix .
 ```
 
-2. Opencode만 설치
+2. Claude + Opencode + Codex (프로젝트 스코프)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh \
-  && bash /tmp/specgate-install.sh --preset opencode --prefix .
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
+bash /tmp/specgate-install.sh --ai claude,opencode,codex --prefix .
 ```
 
-3. Codex 프로젝트 스코프 설치(기본)
+3. Claude + Opencode + Codex (홈 스코프)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh \
-  && bash /tmp/specgate-install.sh --preset codex --prefix .
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
+bash /tmp/specgate-install.sh --ai claude,opencode,codex --codex-target home --prefix .
 ```
 
-4. Codex 홈 스코프 설치(공유)
+4. 전체 설치
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh \
-  && bash /tmp/specgate-install.sh --preset codex-home --prefix .
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
+bash /tmp/specgate-install.sh --ai all --prefix .
+```
+
+동일한 조합에서 업데이트/제거는 `--update`/`--uninstall`을 붙이면 됩니다.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
+bash /tmp/specgate-install.sh --update --ai claude,opencode --prefix .
+bash /tmp/specgate-install.sh --uninstall --ai claude,opencode --prefix .
 ```
 
 `--ai`와 `--agent`는 같은 옵션입니다.
 지원 값: `all`, `claude`, `codex`, `opencode`.
-(`--ai all`은 전체 설치이므로 단일 설치 가이드는 따로 안내되지 않습니다.)
+(`--ai all`은 전체 에이전트 자산 전체를 설치합니다.)
 
-### 설치 매핑 가이드 (단일 에이전트)
+
+### 설치 매핑 가이드
 
 - Claude: `.claude/commands/specgate/*`
 - Opencode: `.opencode/command/*`
-- Codex + `--codex-target project`: `.codex/skills/specgate/*`
-- Codex + `--codex-target home`: `~/.codex/skills/specgate/*`
+- Codex + `--codex-target project`: `.codex/skills/specgate/*` (프로젝트 스코프)
+- Codex + `--codex-target home`: `~/.codex/skills/specgate/*` (공유 스코프)
+- `--ai claude,opencode`는 Claude와 Opencode 대상이 모두 설치됩니다.
+- `--ai claude,opencode,codex`는 선택된 에이전트 대상이 모두 합쳐집니다.
 
 ### 로컬 클론에서 설치
 

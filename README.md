@@ -109,46 +109,58 @@ curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.s
 bash /tmp/specgate-install.sh --preset claude --prefix .
 ```
 
-### Install by agent (single agent)
+### Combined install (multiple agents)
 
-1) Claude only
+Use one command when you want to install several agents together.
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh \
-  && bash /tmp/specgate-install.sh --preset claude --prefix .
-```
-
-2) Opencode only
+Install Claude + Opencode in one run:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh \
-  && bash /tmp/specgate-install.sh --preset opencode --prefix .
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
+bash /tmp/specgate-install.sh --ai claude,opencode --prefix .
 ```
 
-3) Codex in project scope (default for project install)
+Install Claude + Opencode + Codex (project scope):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh \
-  && bash /tmp/specgate-install.sh --preset codex --prefix .
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
+bash /tmp/specgate-install.sh --ai claude,opencode,codex --prefix .
 ```
 
-4) Codex in home scope (shared across projects)
+Install Claude + Opencode + Codex (home scope):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh \
-  && bash /tmp/specgate-install.sh --preset codex-home --prefix .
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
+bash /tmp/specgate-install.sh --ai claude,opencode,codex --codex-target home --prefix .
 ```
 
-### Installation mapping guide (single agent)
+Install all agents (equivalent to `all`):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
+bash /tmp/specgate-install.sh --ai all --prefix .
+```
+
+Update or remove the same set by adding `--update`/`--uninstall`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
+bash /tmp/specgate-install.sh --update --ai claude,opencode --prefix .
+bash /tmp/specgate-install.sh --uninstall --ai claude,opencode --prefix .
+```
+
+### Installation mapping guide
 
 - Claude: install target becomes `.claude/commands/specgate/*`.
 - Opencode: install target becomes `.opencode/command/*`.
-- Codex + `--codex-target project`: `.codex/skills/specgate/*`.
+- Codex + `--codex-target project`: `.codex/skills/specgate/*` (project scope).
 - Codex + `--codex-target home`: `~/.codex/skills/specgate/*` (shared by projects).
+- `--ai claude,opencode` installs both Claude and Opencode targets together.
+- `--ai claude,opencode,codex` installs the union of all selected targets.
 
 `--ai` and `--agent` are aliases.
 Supported values: `all`, `claude`, `codex`, `opencode`.
-(`--ai all` is not recommended for this guide, use one agent per install.)
+(`--ai all` installs all known agent assets.)
 
 ### Install from local clone
 
