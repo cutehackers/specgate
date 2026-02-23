@@ -60,11 +60,51 @@ Options:
   --clean            Remove selected SpecGate assets before install
   --uninstall        Remove SpecGate files from the target directory
   --version <name>    Ref to install when downloading (default: main)
+  --preset <name>     Predefined install profile. Supported: claude, opencode, codex, codex-home, all
   --ai <list>        Agents to install (comma-separated). Supported: all, claude, codex, opencode
   --agent <list>     Alias for --ai
   --codex-target <project|home>  Where to install Codex Agent Skills when --ai includes codex (default: project)
   -h, --help         Show this help
 USAGE
+}
+
+apply_preset() {
+  local preset="${1:-}"
+
+  if [[ -z "${preset//[[:space:]]/}" ]]; then
+    echo "Missing value for --preset" >&2
+    print_usage
+    exit 1
+  fi
+
+  case "$preset" in
+    claude)
+      AGENT_SELECTION="claude"
+      CODEX_TARGET_MODE="project"
+      ;;
+    opencode)
+      AGENT_SELECTION="opencode"
+      CODEX_TARGET_MODE="project"
+      ;;
+    codex|codex-project)
+      AGENT_SELECTION="codex"
+      CODEX_TARGET_MODE="project"
+      ;;
+    codex-home)
+      AGENT_SELECTION="codex"
+      CODEX_TARGET_MODE="home"
+      ;;
+    all)
+      AGENT_SELECTION="all"
+      CODEX_TARGET_MODE="project"
+      ;;
+    *)
+      echo "Unsupported --preset value: $preset" >&2
+      echo "Supported values: claude, opencode, codex, codex-home, all" >&2
+      exit 1
+      ;;
+  esac
+
 }
 
 while [[ $# -gt 0 ]]; do
@@ -89,6 +129,15 @@ case "$1" in
         exit 1
       fi
       VERSION="${2:-}"
+      shift 2
+      ;;
+    --preset)
+      if [[ $# -lt 2 || -z "${2:-}" ]]; then
+        echo "Missing value for --preset"
+        print_usage
+        exit 1
+      fi
+      apply_preset "${2:-}"
       shift 2
       ;;
     --ai|--agent)

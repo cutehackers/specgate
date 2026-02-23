@@ -37,7 +37,7 @@ Install SpecGate:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
-bash /tmp/specgate-install.sh --ai claude --prefix .
+bash /tmp/specgate-install.sh --preset claude --prefix .
 ```
 
 Verify:
@@ -50,13 +50,63 @@ You should see the folders for your selected agent.
 For Codex, run workflows via `.codex/skills/specgate/<workflow>/SKILL.md` directly.  
 If a workflow needs additional input, ask it directly in the Codex chat (do not rely on `AskUserQuestion`).
 
-## 2) Install modes
+## 2) Agent-by-agent lifecycle (Install → Update → Remove)
+
+Pick one agent type first, then run one command per phase.
+
+### Claude
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
+bash /tmp/specgate-install.sh --preset claude --prefix .
+
+bash /tmp/specgate-install.sh --update --preset claude --prefix .
+
+bash /tmp/specgate-install.sh --uninstall --preset claude --prefix .
+```
+
+### Opencode
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
+bash /tmp/specgate-install.sh --preset opencode --prefix .
+
+bash /tmp/specgate-install.sh --update --preset opencode --prefix .
+
+bash /tmp/specgate-install.sh --uninstall --preset opencode --prefix .
+```
+
+### Codex (project scope)
+
+`--preset codex` is project scope by default.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
+bash /tmp/specgate-install.sh --preset codex --prefix .
+
+bash /tmp/specgate-install.sh --update --preset codex --prefix .
+
+bash /tmp/specgate-install.sh --uninstall --preset codex --prefix .
+```
+
+### Codex (home scope)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
+bash /tmp/specgate-install.sh --preset codex-home --prefix .
+
+bash /tmp/specgate-install.sh --update --preset codex-home --prefix .
+
+bash /tmp/specgate-install.sh --uninstall --preset codex-home --prefix .
+```
+
+## 3) Install modes
 
 ### Remote install (single agent)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
-bash /tmp/specgate-install.sh --ai claude --prefix .
+bash /tmp/specgate-install.sh --preset claude --prefix .
 ```
 
 ### Install by agent (single agent)
@@ -65,28 +115,28 @@ bash /tmp/specgate-install.sh --ai claude --prefix .
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh \
-  && bash /tmp/specgate-install.sh --ai claude --prefix .
+  && bash /tmp/specgate-install.sh --preset claude --prefix .
 ```
 
 2) Opencode only
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh \
-  && bash /tmp/specgate-install.sh --ai opencode --prefix .
+  && bash /tmp/specgate-install.sh --preset opencode --prefix .
 ```
 
 3) Codex in project scope (default for project install)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh \
-  && bash /tmp/specgate-install.sh --ai codex --codex-target project --prefix .
+  && bash /tmp/specgate-install.sh --preset codex --prefix .
 ```
 
 4) Codex in home scope (shared across projects)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh \
-  && bash /tmp/specgate-install.sh --ai codex --codex-target home --prefix .
+  && bash /tmp/specgate-install.sh --preset codex-home --prefix .
 ```
 
 ### Installation mapping guide (single agent)
@@ -103,10 +153,10 @@ Supported values: `all`, `claude`, `codex`, `opencode`.
 ### Install from local clone
 
 ```bash
-/path/to/specgate/install.sh --ai claude --prefix .
+/path/to/specgate/install.sh --preset claude --prefix .
 ```
 
-## 3) Install options
+## 4) Install options
 
 ```text
 --prefix <path>     Install target directory (default: .)
@@ -115,6 +165,7 @@ Supported values: `all`, `claude`, `codex`, `opencode`.
 --update            Update only changed files in-place (no backup)
 --clean             Remove selected SpecGate assets and reinstall
 --version <name>    Install from branch/tag (default: main)
+--preset <name>     Preset profile: claude | opencode | codex | codex-home | all
 --ai <list>         Install scope
 --agent <list>      Alias for --ai
 --codex-target <project|home>  Where to install Codex Agent Skills when --ai includes codex (default: project)
@@ -129,19 +180,19 @@ Notes:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
-bash /tmp/specgate-install.sh --dry-run --ai codex --codex-target project --prefix .
+bash /tmp/specgate-install.sh --dry-run --preset codex --prefix .
 ```
 
 ```bash
 # Reset a broken or partial existing install in place
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
-bash /tmp/specgate-install.sh --clean --ai claude --prefix .
+bash /tmp/specgate-install.sh --clean --preset claude --prefix .
 ```
 
 ```bash
 # Update only changed files
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
-bash /tmp/specgate-install.sh --update --ai claude --prefix .
+bash /tmp/specgate-install.sh --update --preset claude --prefix .
 ```
 
 ```bash
@@ -149,19 +200,19 @@ curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.s
 bash /tmp/specgate-install.sh --version v0.0.0 --prefix .
 ```
 
-## 4) Uninstall
+## 5) Uninstall
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
 bash /tmp/specgate-install.sh --uninstall --prefix .
 ```
 
-`--uninstall` without `--ai` removes all agents by default.
+`--uninstall` without `--ai` or `--preset` removes all agents by default.
 To remove only one agent:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
-bash /tmp/specgate-install.sh --uninstall --ai claude --prefix .
+bash /tmp/specgate-install.sh --uninstall --preset claude --prefix .
 ```
 
 Verify removal of all SpecGate assets:
@@ -183,14 +234,14 @@ If you installed Codex in home scope, remove with:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
-bash /tmp/specgate-install.sh --uninstall --ai codex --codex-target home --prefix .
+bash /tmp/specgate-install.sh --uninstall --preset codex-home --prefix .
 ```
 
 ```bash
 [ ! -d ~/.codex/skills/specgate ] && echo "Codex home skills removed."
 ```
 
-## 5) Installed assets
+## 6) Installed assets
 
 - `.specify/*`
 - `.claude/commands/specgate/*`
@@ -202,7 +253,7 @@ bash /tmp/specgate-install.sh --uninstall --ai codex --codex-target home --prefi
 - `.specify/scripts/bash/check-naming-policy.sh`
 - `.specify/scripts/bash/run-feature-workflow-sequence.sh`
 
-Note: `.specify` and `docs/SPECGATE.md` are always installed together for single-agent installs (`--ai codex`, `--ai claude`, etc.).
+Note: `.specify` and `docs/SPECGATE.md` are always installed together for single-agent installs (`--ai codex`, `--ai claude`, etc.) and the equivalent presets (`--preset codex`, `--preset claude`, etc.).
 
 ## 6) Recommended checks (instead of daily smoke check)
 

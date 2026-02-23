@@ -37,7 +37,7 @@ SpecGate 설치:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
-bash /tmp/specgate-install.sh --ai claude --prefix .
+bash /tmp/specgate-install.sh --preset claude --prefix .
 ```
 
 설치 확인:
@@ -50,43 +50,93 @@ ls -la .specify .claude
 Codex는 각 워크플로우를 `.codex/skills/specgate/<workflow>/SKILL.md`로 직접 실행합니다.  
 워크플로우 진행 중 사용자 입력이 필요하면 `AskUserQuestion`이 아닌 채팅에서 직접 질문하고 답변을 기다리세요.
 
-## 2) 설치 방식
+## 2) 에이전트별 사용법: 설치 → 업데이트 → 삭제
+
+에이전트 유형을 먼저 정한 뒤, 아래 3단계만 기억하면 됩니다.
+
+### Claude
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
+bash /tmp/specgate-install.sh --preset claude --prefix .
+
+bash /tmp/specgate-install.sh --update --preset claude --prefix .
+
+bash /tmp/specgate-install.sh --uninstall --preset claude --prefix .
+```
+
+### Opencode
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
+bash /tmp/specgate-install.sh --preset opencode --prefix .
+
+bash /tmp/specgate-install.sh --update --preset opencode --prefix .
+
+bash /tmp/specgate-install.sh --uninstall --preset opencode --prefix .
+```
+
+### Codex (프로젝트 스코프, 기본값)
+
+`--preset codex`는 프로젝트 스코프(설치경로) 기준입니다.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
+bash /tmp/specgate-install.sh --preset codex --prefix .
+
+bash /tmp/specgate-install.sh --update --preset codex --prefix .
+
+bash /tmp/specgate-install.sh --uninstall --preset codex --prefix .
+```
+
+### Codex (홈 스코프, 공유)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
+bash /tmp/specgate-install.sh --preset codex-home --prefix .
+
+bash /tmp/specgate-install.sh --update --preset codex-home --prefix .
+
+bash /tmp/specgate-install.sh --uninstall --preset codex-home --prefix .
+```
+
+## 3) 설치 방식
 
 ### 원격 설치 (단일 에이전트)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
-bash /tmp/specgate-install.sh --ai claude --prefix .
+bash /tmp/specgate-install.sh --preset claude --prefix .
 ```
 
 ### 에이전트별 단일 설치 가이드
 
-1) Claude만 설치
+1. Claude만 설치
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh \
-  && bash /tmp/specgate-install.sh --ai claude --prefix .
+  && bash /tmp/specgate-install.sh --preset claude --prefix .
 ```
 
-2) Opencode만 설치
+2. Opencode만 설치
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh \
-  && bash /tmp/specgate-install.sh --ai opencode --prefix .
+  && bash /tmp/specgate-install.sh --preset opencode --prefix .
 ```
 
-3) Codex 프로젝트 스코프 설치(기본)
+3. Codex 프로젝트 스코프 설치(기본)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh \
-  && bash /tmp/specgate-install.sh --ai codex --codex-target project --prefix .
+  && bash /tmp/specgate-install.sh --preset codex --prefix .
 ```
 
-4) Codex 홈 스코프 설치(공유)
+4. Codex 홈 스코프 설치(공유)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh \
-  && bash /tmp/specgate-install.sh --ai codex --codex-target home --prefix .
+  && bash /tmp/specgate-install.sh --preset codex-home --prefix .
 ```
 
 `--ai`와 `--agent`는 같은 옵션입니다.
@@ -100,14 +150,13 @@ curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.s
 - Codex + `--codex-target project`: `.codex/skills/specgate/*`
 - Codex + `--codex-target home`: `~/.codex/skills/specgate/*`
 
-
 ### 로컬 클론에서 설치
 
 ```bash
-/path/to/specgate/install.sh --ai claude --prefix .
+/path/to/specgate/install.sh --preset claude --prefix .
 ```
 
-## 3) 설치 옵션
+## 4) 설치 옵션
 
 ```text
 --prefix <경로>             설치 대상 디렉토리 (기본값: .)
@@ -116,6 +165,7 @@ curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.s
 --update                    변경된 파일만 갱신 (백업 파일 생성 없음)
 --clean                     기존 SpecGate 설치 자산을 삭제하고 재설치
 --version <이름>            브랜치/태그 지정 (기본값: main)
+--preset <이름>             사전 정의된 설치 프리셋: claude | opencode | codex | codex-home | all
 --ai <목록>                 설치할 에이전트 범위
 --agent <목록>              --ai 별칭
 --codex-target <project|home> Codex Agent Skills 설치 위치 (기본값: project)
@@ -123,6 +173,7 @@ curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.s
 ```
 
 참고:
+
 - install, uninstall, clean, update 동작 모두 백업 파일을 생성하지 않습니다.
 - `--update`는 반복 실행해도 안전합니다. 변경되지 않은 파일은 건너뛰고 변경된 파일만 갱신됩니다.
 
@@ -130,19 +181,19 @@ curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.s
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
-bash /tmp/specgate-install.sh --dry-run --ai codex --codex-target project --prefix .
+bash /tmp/specgate-install.sh --dry-run --preset codex --prefix .
 ```
 
 ```bash
 # 깨진/일부로 남은 기존 설치를 초기 상태로 재설치
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
-bash /tmp/specgate-install.sh --clean --ai claude --prefix .
+bash /tmp/specgate-install.sh --clean --preset claude --prefix .
 ```
 
 ```bash
 # 변경 파일만 덮어쓰기
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
-bash /tmp/specgate-install.sh --update --ai claude --prefix .
+bash /tmp/specgate-install.sh --update --preset claude --prefix .
 ```
 
 ```bash
@@ -150,19 +201,19 @@ curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.s
 bash /tmp/specgate-install.sh --version v0.0.0 --prefix .
 ```
 
-## 4) 제거
+## 5) 제거
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
 bash /tmp/specgate-install.sh --uninstall --prefix .
 ```
 
-`--uninstall`에서 `--ai`를 생략하면 기본값 `all`로 모든 에이전트 항목을 제거합니다.
+`--uninstall`에서 `--ai` 또는 `--preset`를 생략하면 기본값 `all`로 모든 에이전트 항목을 제거합니다.
 특정 에이전트만 제거:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
-bash /tmp/specgate-install.sh --uninstall --ai claude --prefix .
+bash /tmp/specgate-install.sh --uninstall --preset claude --prefix .
 ```
 
 제거 확인(모든 SpecGate 자산):
@@ -184,14 +235,14 @@ Codex 홈 스코프 설치를 해 둔 경우:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
-bash /tmp/specgate-install.sh --uninstall --ai codex --codex-target home --prefix .
+bash /tmp/specgate-install.sh --uninstall --preset codex-home --prefix .
 ```
 
 ```bash
 [ ! -d ~/.codex/skills/specgate ] && echo "Codex home skills removed."
 ```
 
-## 5) 설치 항목
+## 6) 설치 항목
 
 - `.specify/*`
 - `.claude/commands/specgate/*`
@@ -203,7 +254,7 @@ bash /tmp/specgate-install.sh --uninstall --ai codex --codex-target home --prefi
 - `.specify/scripts/bash/check-naming-policy.sh`
 - `.specify/scripts/bash/run-feature-workflow-sequence.sh`
 
-참고: `--ai codex`, `--ai claude` 등 단일 에이전트 설치시에도 `.specify` 및 `docs/SPECGATE.md`는 항상 함께 설치됩니다.
+참고: `--ai codex`, `--ai claude` 등 단일 에이전트 설치 시(`--preset` 동등값: `codex`, `claude`)에도 `.specify` 및 `docs/SPECGATE.md`는 항상 함께 설치됩니다.
 
 ## 6) 일일 점검 가이드 (smoke check 대체)
 
