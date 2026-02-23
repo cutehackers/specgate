@@ -9,6 +9,7 @@
 - **Status**: Draft
 - **Architecture Baseline**: `docs/ARCHITECTURE.md`
 - **Naming Source**: `<resolved docs/ARCHITECTURE.md or constitution path>`
+- **Naming Policy Rules**: <{{NAMING_RULES}}>
 - **Input**: "$ARGUMENTS"
 
 ## Problem Statement & Scope
@@ -98,8 +99,8 @@
 
 ## Architecture Compliance
 
-> Validate against resolved naming source:
-> `docs/ARCHITECTURE.md` (if naming section exists) or Constitution fallback.
+> Validate against resolved naming source. The resolved source must be a machine-readable
+> `json` block in `docs/ARCHITECTURE.md`/`docs/architecture.md` or constitution.
 
 | Check | Status (PASS/OPEN) | Notes |
 |------|---------------------|-------|
@@ -107,6 +108,15 @@
 | Domain framework-agnostic rule | [PASS/OPEN] | [note] |
 | Riverpod/event-driven pattern alignment | [PASS/OPEN] | [note] |
 | Screen abstraction-only policy for presentation planning | [PASS/OPEN] | [note] |
+| Entity naming rule from resolved naming source (`{{ENTITY_SUFFIX}}`) | [PASS/OPEN] | [note] |
+| DTO naming rule from resolved naming source (`{{DTO_SUFFIX}}`) | [PASS/OPEN] | [note] |
+| Use Case naming rule from resolved naming source (`{{USE_CASE_SUFFIX}}`) | [PASS/OPEN] | [note] |
+| Repository naming rule from resolved naming source (`{{REPOSITORY_SUFFIX}}`) | [PASS/OPEN] | [note] |
+| Repository Impl naming rule from resolved naming source (`{{REPOSITORY_IMPL_SUFFIX}}`) | [PASS/OPEN] | [note] |
+| Event naming rule from resolved naming source (`{{EVENT_SUFFIX}}`) | [PASS/OPEN] | [note] |
+| Controller naming rule from resolved naming source (`{{CONTROLLER_SUFFIX}}`) | [PASS/OPEN] | [note] |
+| Data Source naming rule from resolved naming source (`{{DATA_SOURCE_SUFFIX}}`) | [PASS/OPEN] | [note] |
+| Provider naming rule from resolved naming source (`{{PROVIDER_SUFFIX}}`) | [PASS/OPEN] | [note] |
 | Generic naming ambiguity policy (`utils.dart`, `helpers.dart`, `Util`, `Helper`, `Manager`) | [PASS/OPEN] | [note] |
 
 ## Success Criteria

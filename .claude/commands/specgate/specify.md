@@ -60,16 +60,16 @@ Given that feature description, do this:
 1.1 **Resolve naming policy source**:
    - Let `FEATURE_DIR` be the resolved absolute feature directory.
    - Determine `NAMING_SOURCE_FILE` with this precedence:
-     1. `<FEATURE_DIR>/docs/ARCHITECTURE.md` 또는 `<FEATURE_DIR>/docs/architecture.md` 중 다음 조건을 만족하면 사용:
-        - 섹션 제목이 `Naming Rules`, `Naming Convention`, `Naming Policy` 중 하나인 경우
-        - 정규식으로는 `^#{1,4}\s*Naming\s+(Rules|Convention|Policy)\s*$` (대소문자 무시)
-        - 해당 섹션에 실제 규칙이 들어 있는 텍스트가 최소 1줄 이상 존재
-     2. 위 조건 미충족 시 fallback:
+     1. Use `<FEATURE_DIR>/docs/ARCHITECTURE.md` or `<FEATURE_DIR>/docs/architecture.md` when all of the following are met:
+        - Section heading is one of `Naming Rules`, `Naming Convention`, `Naming Policy`
+        - The heading matches regex `^#{1,4}\s*Naming\s+(Rules|Convention|Policy)\s*$` (case-insensitive)
+        - The section contains a machine-readable naming policy inside a **JSON code block** (```json ... ```)
+     2. If the above conditions are not met, fallback:
         - `<FEATURE_DIR>/docs/constitution.md`
         - `<FEATURE_DIR>/constitution.md`
         - `<REPO_ROOT>/.specify/memory/constitution.md`
-     3. 모두 실패하면 레포 기본 네이밍 가드레일 적용(명명 규칙 누락 오류로 중단하지 않음).
-   - `ARCHITECTURE`, `CONSTITUTION`, `DEFAULT` 중 선택된 소스를 기록해 후속 단계에서 사용한다.
+     3. If all of these fail, apply repository default naming guardrails (strict production workflow requires `--no-strict-naming` or pre-correction).
+   - Record the selected source (`ARCHITECTURE`, `CONSTITUTION`, or `DEFAULT`) for downstream steps.
 
 2. **Optional branch creation** (only if `--create-branch` is present):
    - Generate a concise short name (2-4 words) for the branch:
@@ -151,8 +151,8 @@ Given that feature description, do this:
 5. Write or update SPEC_FILE in an idempotent way:
    - If SPEC_FILE does not exist: create it from the template structure and replace placeholders with concrete details from the feature description.
    - If SPEC_FILE already exists: update in place only where needed, preserving existing confirmed content and section structure (no destructive rewrite).
-   - Ensure spec metadata에 `Naming Source` 항목을 채워 `NAMING_SOURCE_FILE`의 출처를 기록한다.
-   - `ARCHITECTURE` 소스가 사용 불가했을 때는 `Architecture Compliance` 섹션에 fallback 사유를 짧게 남긴다.
+   - Ensure spec metadata includes the `Naming Source` field with the resolved `NAMING_SOURCE_FILE` origin.
+   - When `ARCHITECTURE` is unavailable, add a short fallback reason under `Architecture Compliance`.
 
 6. **Specification Quality Validation**: After writing the initial spec, validate it against quality criteria:
 

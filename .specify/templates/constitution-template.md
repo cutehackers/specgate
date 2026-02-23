@@ -28,6 +28,26 @@
 [PRINCIPLE_5_DESCRIPTION]
 <!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
 
+## Naming Conventions
+
+All naming rules MUST be defined in machine-readable JSON in this constitution or an architecture document.
+
+```json
+{
+  "entity": "{Name}Entity",
+  "dto": "{Name}Dto",
+  "use_case": "{Action}UseCase",
+  "repository": "{Feature}Repository",
+  "repository_impl": "{Feature}RepositoryImpl",
+  "event": "{Feature}{Action}Event",
+  "controller": "{Feature}Controller",
+  "data_source": "{Feature}{Type}DataSource",
+  "provider": "{featureName}{Type}Provider"
+}
+```
+
+Feature templates and code-generation workflows MUST reference this section for naming checks and validation.
+
 ## [SECTION_2_NAME]
 <!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
 

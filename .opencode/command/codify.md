@@ -53,17 +53,18 @@ Default execution flow: `/specify` -> `/clarify` -> `/codify` -> `/test-specify`
      ```
      to refresh pointer progress before implementation.
    - Resolve naming policy source for coding checks:
-     1. `<FEATURE_DIR>/docs/ARCHITECTURE.md` 또는 `<FEATURE_DIR>/docs/architecture.md`에서 아래 중 하나의 제목이 있고 실사용 가능한 규칙이 있으면 사용:
+     1. Use `<FEATURE_DIR>/docs/ARCHITECTURE.md` or `<FEATURE_DIR>/docs/architecture.md` when it has:
         - `Naming Rules`
         - `Naming Convention`
         - `Naming Policy`
-        - 정규식: `^#{1,4}\s*Naming\s+(Rules|Convention|Policy)\s*$` (대소문자 무시)
-     2. 위 조건이 없으면 fallback:
+        - Regex `^#{1,4}\s*Naming\s+(Rules|Convention|Policy)\s*$` (case-insensitive)
+        - A non-empty actionable naming section
+     2. If conditions are not met, fallback to:
         - `<FEATURE_DIR>/docs/constitution.md`
         - `<FEATURE_DIR>/constitution.md`
         - `<REPO_ROOT>/.specify/memory/constitution.md`
-     3. 모두 없으면 기본 repository 네이밍 가드레일 사용.
-   - 결과를 `NAMING_SOURCE_FILE`로 보관한다.
+     3. If none exist, use default repository naming guardrails.
+   - Persist result as `NAMING_SOURCE_FILE`.
    - Then run `.specify/scripts/bash/setup-code.sh --json --feature-dir "<abs path>"` from repo root and parse JSON for FEATURE_SPEC, CODE_DOC, FEATURE_DIR, FEATURE_DOCS_DIR.
    - Resolve required artifact paths from FEATURE_DOCS_DIR:
      - `DATA_MODEL=<FEATURE_DOCS_DIR>/data-model.md`

@@ -14,10 +14,12 @@ OpenCode for `SpecGate`.
 
 - `scripts/bash/check-spec-prerequisites.sh`
 - `scripts/bash/check-code-prerequisites.sh`
+- `scripts/bash/check-naming-policy.sh`
 - `scripts/bash/check-implementation-readiness.sh`
 - `scripts/bash/check-implementation-quality.sh`
 - `scripts/bash/check-test-prerequisites.sh`
 - `scripts/bash/check-test-coverage-targets.sh`
+- `scripts/bash/run-feature-workflow-sequence.sh`
 - `scripts/bash/setup-code.sh`
 - `scripts/bash/setup-test-spec.sh`
 - `scripts/bash/specgate-sync-pointer.sh`

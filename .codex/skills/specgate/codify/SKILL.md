@@ -56,17 +56,17 @@ Default execution flow: `/specify` -> `/clarify` -> `/codify` -> `/test-specify`
      ```
      to refresh pointer progress before implementation.
    - Resolve naming policy source for coding checks:
-     1. `<FEATURE_DIR>/docs/ARCHITECTURE.md` or `<FEATURE_DIR>/docs/architecture.md` if it contains a usable section headed by one of:
-        - `Naming Rules`
-        - `Naming Convention`
-        - `Naming Policy`
-        - Heading regex: `^#{1,4}\s*Naming\s+(Rules|Convention|Policy)\s*$` (case-insensitive)
-        - Section must have substantive rule content
+     1. `<FEATURE_DIR>/docs/ARCHITECTURE.md` or `<FEATURE_DIR>/docs/architecture.md` if it contains:
+        - a machine-readable `json` code-block naming section
+        - a valid section heading (`Naming Rules`, `Naming Convention`, `Naming Policy`)
+        - heading regex: `^#{1,4}\s*Naming\s+(Rules|Convention|Policy)\s*$` (case-insensitive)
+        - substantive rule content
      2. If absent/unusable, fallback to:
         - `<FEATURE_DIR>/docs/constitution.md`
         - `<FEATURE_DIR>/constitution.md`
         - `<REPO_ROOT>/.specify/memory/constitution.md`
      3. If neither has usable guidance, use existing repository default naming guardrails.
+        - In production validation (`run-feature-workflow-sequence` with strict mode), missing or invalid `json` naming policy is treated as a blocking error.
      - Store result as `NAMING_SOURCE_FILE` for use in implementation trace checks.
    - Then run `.specify/scripts/bash/setup-code.sh --json --feature-dir "<abs path>"` from repo root and parse JSON for FEATURE_SPEC, CODE_DOC, FEATURE_DIR, FEATURE_DOCS_DIR.
    - Resolve required artifact paths from FEATURE_DOCS_DIR:

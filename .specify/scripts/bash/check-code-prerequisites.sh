@@ -28,16 +28,26 @@ source "$SCRIPT_DIR/common.sh"
 eval $(get_feature_paths "$FEATURE_DIR_ARG") || exit 1
 
 if [[ ! -f "$CODE_DOC" ]]; then
-    echo "ERROR: tasks.md not found: $CODE_DOC" >&2
+    if $JSON_MODE; then
+        printf '{"ok":false,"code_doc":"%s","naming_source":{"kind":"%s","file":"%s","reason":"%s"},"artifact_errors":["Missing required artifact: tasks.md"],"contracts_detected":false,"parallel_strategy_issues":[],"forbidden_terms":[],"forbidden_name_terms":[],"priority_issues":[],"priority_counts":{"P1":0,"P2":0,"P3":0},"blocking_priority_counts":{"P1":0,"P2":0,"P3":0},"execution_context":{},"execution_context_issues":[],"violation_sections":{},"name_violation_sections":{},"naming_policy_violations":[],"naming_policy":{}}\n' \
+            "$CODE_DOC" "$NAMING_SOURCE_KIND" "$NAMING_SOURCE_FILE" "$NAMING_SOURCE_REASON"
+    else
+        echo "ERROR: tasks.md not found: $CODE_DOC" >&2
+    fi
     exit 1
 fi
 
 if [[ ! -f "$DATA_MODEL" ]]; then
-    echo "ERROR: data-model.md not found: $DATA_MODEL" >&2
+    if $JSON_MODE; then
+        printf '{"ok":false,"code_doc":"%s","naming_source":{"kind":"%s","file":"%s","reason":"%s"},"artifact_errors":["Missing required artifact: data-model.md"],"contracts_detected":false,"parallel_strategy_issues":[],"forbidden_terms":[],"forbidden_name_terms":[],"priority_issues":[],"priority_counts":{"P1":0,"P2":0,"P3":0},"blocking_priority_counts":{"P1":0,"P2":0,"P3":0},"execution_context":{},"execution_context_issues":[],"violation_sections":{},"name_violation_sections":{},"naming_policy_violations":[],"naming_policy":{}}\n' \
+            "$CODE_DOC" "$NAMING_SOURCE_KIND" "$NAMING_SOURCE_FILE" "$NAMING_SOURCE_REASON"
+    else
+        echo "ERROR: data-model.md not found: $DATA_MODEL" >&2
+    fi
     exit 1
 fi
 
-python3 - <<'PY' "$CODE_DOC" "$JSON_MODE" "$SCREEN_ABSTRACTION" "$QUICKSTART" "$DATA_MODEL" "$CONTRACTS_DIR" "$NAMING_SOURCE_KIND" "$NAMING_SOURCE_FILE" "$NAMING_SOURCE_REASON"
+python3 - <<'PY' "$CODE_DOC" "$JSON_MODE" "$SCREEN_ABSTRACTION" "$QUICKSTART" "$DATA_MODEL" "$CONTRACTS_DIR" "$NAMING_SOURCE_KIND" "$NAMING_SOURCE_FILE" "$NAMING_SOURCE_REASON" "$NAMING_POLICY_JSON"
 import json
 import re
 import sys
@@ -54,7 +64,54 @@ json_naming_source = {
     "file": sys.argv[8] if len(sys.argv) > 8 else "",
     "reason": sys.argv[9] if len(sys.argv) > 9 else "No naming policy metadata provided.",
 }
+try:
+    json_naming_rules = json.loads(sys.argv[10]) if len(sys.argv) > 10 and sys.argv[10] else {}
+except Exception:
+    json_naming_rules = {}
 text = code_doc_path.read_text(encoding="utf-8").replace("\r\n", "\n")
+
+
+def normalize_naming_rules(raw):
+    if not isinstance(raw, dict):
+        return {}
+
+    if isinstance(raw.get("naming"), dict):
+        base_rules = {**raw}
+        base_rules.update(raw["naming"])
+    else:
+        base_rules = raw
+
+    normalized = {}
+    for key, value in base_rules.items():
+        if key == "naming":
+            continue
+        if not isinstance(value, str):
+            continue
+        normalized[str(key).strip().lower().replace("-", "_")] = value.strip()
+    return normalized
+
+
+def naming_suffix(pattern: str) -> str:
+    if not isinstance(pattern, str):
+        return ""
+    return re.sub(r"\{[^{}]+\}", "", pattern).strip()
+
+
+def naming_key_display(key: str) -> str:
+    normalized = str(key).strip().lower().replace("-", "_")
+    if normalized == "dto":
+        return "DTO"
+    if normalized == "use_case":
+        return "Use Case"
+    if normalized == "data_source":
+        return "Data Source"
+    if normalized == "repository_impl":
+        return "Repository Impl"
+    return " ".join(part.capitalize() for part in normalized.split("_"))
+
+
+def naming_row_label(key: str) -> str:
+    return f"{naming_key_display(key)} naming rule from resolved naming source"
 
 
 required_sections = [
@@ -125,6 +182,87 @@ def parse_file_marked_sections(path: Path):
 
     file_text = path.read_text(encoding="utf-8").replace("\r\n", "\n")
     return parse_sections(file_text), file_text
+
+
+def parse_data_model_entities(text: str):
+    if not text:
+        return []
+
+    in_entities_section = False
+    in_table = False
+    table_header_seen = False
+    entities = []
+    seen = set()
+    in_code_block = False
+    table_sep_re = re.compile(r"^\|?[-:\s|]+\|?$")
+
+    for raw_line in text.splitlines():
+        stripped = raw_line.strip()
+        if stripped.startswith("```") or stripped.startswith("~~~"):
+            in_code_block = not in_code_block
+            continue
+        if in_code_block:
+            continue
+
+        if re.match(r"^\s*#{1,6}\s+\S", raw_line):
+            heading = re.sub(r"^\s*#{1,6}\s*", "", raw_line.strip())
+            if in_entities_section:
+                break
+            if re.match(r"^Entities?\b", heading, re.IGNORECASE):
+                in_entities_section = True
+            continue
+
+        if not in_entities_section:
+            continue
+
+        if stripped.startswith("|"):
+            if table_sep_re.fullmatch(stripped):
+                continue
+            if not in_table:
+                in_table = True
+                table_header_seen = True
+                continue
+            if table_header_seen:
+                table_header_seen = False
+                continue
+
+            cells = [cell.strip() for cell in stripped.strip("|").split("|")]
+            if not cells:
+                continue
+            candidate = cells[0].strip()
+            if not candidate or candidate.lower() in {"entity", "entities"}:
+                continue
+
+            m = re.match(r"^\*\*([^*]+)\*\*$", candidate)
+            if m:
+                candidate = m.group(1).strip()
+            if re.match(r"^\[([^\]]+)\]$", candidate):
+                candidate = candidate.strip("[]").strip()
+
+            if re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", candidate):
+                if candidate.lower() not in {"entity", "entities"} and candidate not in seen:
+                    seen.add(candidate)
+                    entities.append(candidate)
+            continue
+
+        if not re.match(r"^\s*-\s+", stripped):
+            continue
+        if stripped.startswith("- ###"):
+            continue
+
+        m = re.match(r"^\s*-\s+\*\*([^*]+)\*\*(?:\s*:.*)?$", stripped)
+        if not m:
+            m = re.match(r"^\s*-\s*\[([^\]]+)\](?:\s*:.*)?$", stripped)
+        if not m:
+            m = re.match(r"^\s*-\s*([A-Za-z_][A-Za-z0-9_]*)(?:\s*:.*)?$", stripped)
+
+        if m:
+            name = m.group(1).strip()
+            if name and name.lower() not in {"entity", "entities"} and name not in seen:
+                seen.add(name)
+                entities.append(name)
+
+    return entities
 
 
 def parse_task_priority_sections(section_text: str):
@@ -375,6 +513,86 @@ else:
     sections_to_scan["DATA_MODEL_DOC"] = data_model_text
 
 
+naming_policy_violations = []
+def architecture_compliance_issue(section_content: str, row_label: str, expected_suffix):
+    if not expected_suffix:
+        return None
+    row_marker = row_label.lower()
+    for line in section_content.splitlines():
+        if row_marker not in line.lower():
+            continue
+        if "|" not in line:
+            continue
+        normalized = line.replace(" ", "")
+        if expected_suffix in line:
+            return None
+        if expected_suffix in normalized:
+            return None
+        if "{{" in line and "}}" in line:
+            return (
+                "Architecture Compliance table includes unresolved naming placeholder "
+                f"for {row_label}."
+            )
+        return (
+            "Architecture Compliance table has naming row for "
+            f"{row_label} but does not include resolved suffix '{expected_suffix}'."
+        )
+    return (
+        "Architecture Compliance table is missing required naming row: "
+        f"{row_label}"
+    )
+
+
+naming_rules = normalize_naming_rules(json_naming_rules)
+expected_rules = []
+for key in [
+    "entity",
+    "dto",
+    "use_case",
+    "repository",
+    "repository_impl",
+    "event",
+    "controller",
+    "data_source",
+    "provider",
+]:
+    if key in naming_rules:
+        expected_rules.append((key, naming_rules[key], naming_suffix(naming_rules[key])))
+
+expected_entity_rule = naming_rules.get("entity", "")
+expected_entity_suffix = naming_suffix(expected_entity_rule)
+
+arch = sections.get("## Architecture Compliance", "")
+for key, _, suffix in expected_rules:
+    if not suffix:
+        continue
+    arch_check = architecture_compliance_issue(
+        arch, naming_row_label(key), suffix
+    )
+    if arch_check:
+        naming_policy_violations.append(arch_check)
+
+if expected_entity_suffix and data_model_text:
+    data_model_entities = parse_data_model_entities(data_model_text)
+    missing_suffix_entities = [
+        entity_name
+        for entity_name in data_model_entities
+        if not entity_name.endswith(expected_entity_suffix)
+    ]
+    if missing_suffix_entities:
+        display_rule = (
+            expected_entity_rule
+            if expected_entity_rule
+            else expected_entity_suffix
+        )
+        naming_policy_violations.append(
+            "data-model.md entities do not follow naming policy (`Entities: "
+            + display_rule
+            + "`): "
+            + ", ".join(sorted(missing_suffix_entities))
+        )
+
+
 def iter_scan_lines(text_block: str):
     for line in text_block.splitlines():
         stripped = line.strip()
@@ -583,6 +801,7 @@ ok = (
     and not forbidden_name_terms
     and not priority_issues
     and not artifact_checks
+    and not naming_policy_violations
     and not parallel_strategy_issues
     and not execution_context_issues
 )
@@ -602,6 +821,7 @@ result = {
     "blocking_priority_counts": blocking_counts,
     "execution_context": execution_context,
     "execution_context_issues": execution_context_issues,
+    "naming_policy": naming_rules,
     "violation_sections": {
         section: sorted(list(terms))
         for section, terms in violations_by_section.items()
@@ -610,6 +830,7 @@ result = {
         section: sorted(list(terms))
         for section, terms in name_violations_by_section.items()
     },
+    "naming_policy_violations": naming_policy_violations,
 }
 
 if json_mode:
@@ -647,6 +868,10 @@ else:
             print("Forbidden naming terms detected:", file=sys.stderr)
             for section, terms in result["name_violation_sections"].items():
                 print(f"  - {section}: {', '.join(terms)}", file=sys.stderr)
+        if naming_policy_violations:
+            print("Naming policy violations:", file=sys.stderr)
+            for issue in naming_policy_violations:
+                print(f"  - {issue}", file=sys.stderr)
 
 if not ok:
     raise SystemExit(1)

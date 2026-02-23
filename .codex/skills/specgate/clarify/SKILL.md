@@ -68,13 +68,13 @@ to refresh pointer progress before clarification edits.
      1. `<FEATURE_DIR>/docs/ARCHITECTURE.md` or `<FEATURE_DIR>/docs/architecture.md` if it contains at least one usable naming section:
         - heading is one of `Naming Rules`, `Naming Convention`, `Naming Policy`
         - heading matches `^#{1,4}\s*Naming\s+(Rules|Convention|Policy)\s*$` (case-insensitive)
-        - section includes non-empty concrete lines (excluding comments/placeholders/blank lines)
+        - section includes a non-empty `json` code-block naming definition
      2. If missing or unusable, fallback to:
         - `<FEATURE_DIR>/docs/constitution.md`
         - `<FEATURE_DIR>/constitution.md`
         - `<REPO_ROOT>/.specify/memory/constitution.md`
      3. If neither has usable naming policy, use existing repo default naming guardrails.
-   - Do not fail for missing architecture naming rules; proceed with fallback and record the chosen source.
+   - Do not fail for missing architecture naming rules in normal flow; if strict production checks are required, enforce by running sequence with strict naming.
    - Keep `NAMING_SOURCE_FILE` in workflow context for final report and artifact updates.
 
 2. Run `.specify/scripts/bash/check-prerequisites.sh --json --paths-only --feature-dir "<abs path>"` from repo root **once** (combined `--json --paths-only` mode / `-Json -PathsOnly`). Parse minimal JSON payload fields:

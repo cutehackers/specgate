@@ -65,14 +65,17 @@ required_files=(
     ".specify/templates/test-spec-template.md"
     ".specify/templates/quickstart-template.md"
     ".specify/templates/screen-abstraction-template.md"
+    ".specify/scripts/bash/check-prerequisites.sh"
     ".specify/scripts/bash/check-spec-prerequisites.sh"
     ".specify/scripts/bash/check-code-prerequisites.sh"
+    ".specify/scripts/bash/check-naming-policy.sh"
     ".specify/scripts/bash/check-test-prerequisites.sh"
     ".specify/scripts/bash/check-implementation-quality.sh"
     ".specify/scripts/bash/check-implementation-readiness.sh"
     ".specify/scripts/bash/check-test-coverage-targets.sh"
     ".specify/scripts/bash/specgate-sync-pointer.sh"
     ".specify/scripts/bash/specgate-status.sh"
+    ".specify/scripts/bash/run-feature-workflow-sequence.sh"
     ".specify/scripts/bash/setup-code.sh"
     ".specify/scripts/bash/setup-test-spec.sh"
     ".claude/hooks/statusline.js"
@@ -362,8 +365,11 @@ for rel in "${supporting_sync_safe[@]}"; do
 done
 
 for script in \
+    "$REPO_ROOT/.specify/scripts/bash/check-prerequisites.sh" \
     "$REPO_ROOT/.specify/scripts/bash/check-spec-prerequisites.sh" \
     "$REPO_ROOT/.specify/scripts/bash/check-code-prerequisites.sh" \
+    "$REPO_ROOT/.specify/scripts/bash/check-naming-policy.sh" \
+    "$REPO_ROOT/.specify/scripts/bash/run-feature-workflow-sequence.sh" \
     "$REPO_ROOT/.specify/scripts/bash/check-test-prerequisites.sh" \
     "$REPO_ROOT/.specify/scripts/bash/check-implementation-quality.sh" \
     "$REPO_ROOT/.specify/scripts/bash/check-implementation-readiness.sh" \

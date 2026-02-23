@@ -29,7 +29,7 @@ eval $(get_feature_paths "$FEATURE_DIR_ARG") || exit 1
 
 if [[ ! -f "$FEATURE_SPEC" ]]; then
     if $JSON_MODE; then
-        printf '{"ok":false,"spec":"%s","naming_source":{"kind":"%s","file":"%s","reason":"%s"},"missing_sections":[],"empty_sections":[],"issue_messages":["spec.md not found"],"edge_case_count":0,"placeholder_tokens":[],"unresolved_clarifications":0,"concrete_ui_terms":[],"forbidden_naming_terms":[]}\n' \
+        printf '{"ok":false,"spec":"%s","naming_source":{"kind":"%s","file":"%s","reason":"%s"},"missing_sections":[],"empty_sections":[],"issue_messages":["spec.md not found"],"edge_case_count":0,"placeholder_tokens":[],"unresolved_clarifications":0,"concrete_ui_terms":[],"forbidden_naming_terms":[],"naming_policy":{},"naming_policy_violations":[]}\n' \
             "$FEATURE_SPEC" "$NAMING_SOURCE_KIND" "$NAMING_SOURCE_FILE" "$NAMING_SOURCE_REASON"
     else
         echo "ERROR: spec.md not found: $FEATURE_SPEC" >&2
@@ -37,7 +37,7 @@ if [[ ! -f "$FEATURE_SPEC" ]]; then
     exit 1
 fi
 
-python3 - <<'PY' "$FEATURE_SPEC" "$JSON_MODE" "$NAMING_SOURCE_KIND" "$NAMING_SOURCE_FILE" "$NAMING_SOURCE_REASON"
+python3 - <<'PY' "$FEATURE_SPEC" "$JSON_MODE" "$NAMING_SOURCE_KIND" "$NAMING_SOURCE_FILE" "$NAMING_SOURCE_REASON" "$NAMING_POLICY_JSON"
 import json
 import re
 import sys
@@ -50,7 +50,31 @@ json_naming_source = {
     "file": sys.argv[4] if len(sys.argv) > 4 else "",
     "reason": sys.argv[5] if len(sys.argv) > 5 else "No naming policy metadata provided.",
 }
+try:
+    json_naming_rules = json.loads(sys.argv[6]) if len(sys.argv) > 6 and sys.argv[6] else {}
+except Exception:
+    json_naming_rules = {}
 text = spec_path.read_text(encoding="utf-8").replace("\r\n", "\n")
+
+
+def normalize_naming_rules(raw):
+    if not isinstance(raw, dict):
+        return {}
+
+    if isinstance(raw.get("naming"), dict):
+        base_rules = {**raw}
+        base_rules.update(raw["naming"])
+    else:
+        base_rules = raw
+
+    normalized = {}
+    for key, value in base_rules.items():
+        if key == "naming":
+            continue
+        if not isinstance(value, str):
+            continue
+        normalized[str(key).strip().lower().replace("-", "_")] = value.strip()
+    return normalized
 
 required_sections = [
     "## Metadata",
@@ -101,6 +125,31 @@ def has_meaningful_content(content: str) -> bool:
             continue
         return True
     return False
+
+
+def naming_suffix(pattern: str) -> str:
+    if not isinstance(pattern, str):
+        return ""
+
+    suffix = re.sub(r"\{[^{}]+\}", "", pattern).strip()
+    return suffix
+
+
+def naming_key_display(key: str) -> str:
+    normalized = str(key).strip().lower().replace("-", "_")
+    if normalized == "dto":
+        return "DTO"
+    if normalized == "use_case":
+        return "Use Case"
+    if normalized == "data_source":
+        return "Data Source"
+    if normalized == "repository_impl":
+        return "Repository Impl"
+    return " ".join(part.capitalize() for part in normalized.split("_"))
+
+
+def naming_row_label(key: str) -> str:
+    return f"{naming_key_display(key)} naming rule from resolved naming source"
 
 
 empty_sections = []
@@ -243,6 +292,174 @@ if forbidden_naming_terms:
         + ", ".join(sorted(forbidden_naming_terms))
     )
 
+
+naming_policy_violations = []
+
+
+def parse_domain_entities(text: str):
+    section = sections.get("## Domain Model", "")
+    if not section:
+        return []
+
+    in_entities = False
+    in_table = False
+    table_header_seen = False
+    entities = []
+    seen = set()
+    table_sep_re = re.compile(r"^\|?[-:\s|]+\|?$")
+
+    for line in section.splitlines():
+        if re.match(r"^###\s+", line):
+            if in_entities:
+                break
+            if re.match(r"^###\s*Entities\b", line, re.IGNORECASE):
+                in_entities = True
+            continue
+
+        if not in_entities:
+            continue
+
+        stripped = line.strip()
+        if not stripped:
+            continue
+
+        if stripped.startswith("|"):
+            if table_sep_re.fullmatch(stripped):
+                continue
+
+            if not in_table:
+                in_table = True
+                table_header_seen = True
+                continue
+
+            if table_header_seen:
+                table_header_seen = False
+                continue
+
+            cells = [cell.strip() for cell in stripped.strip("|").split("|")]
+            if not cells:
+                continue
+            candidate = cells[0].strip()
+            if not candidate or candidate.lower() in {"entity", "entities"}:
+                continue
+
+            m = re.match(r"^\*\*([^*]+)\*\*$", candidate)
+            if m:
+                candidate = m.group(1).strip()
+
+            if re.match(r"^\[([^\]]+)\]$", candidate):
+                candidate = candidate.strip("[]").strip()
+
+            if re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", candidate) and candidate.lower() not in {"entity", "entities"}:
+                if candidate not in seen:
+                    seen.add(candidate)
+                    entities.append(candidate)
+            continue
+
+        if not re.match(r"^\s*-\s+", line):
+            continue
+
+        # parse bullet style list entries
+        if stripped.startswith("- ###"):
+            continue
+
+        m = re.match(r"^\s*-\s+\*\*([^*]+)\*\*(?:\s*:.*)?$", stripped)
+        if not m:
+            m = re.match(r"^\s*-\s*\[([^\]]+)\](?:\s*:.*)?$", stripped)
+        if not m:
+            m = re.match(r"^\s*-\s*([A-Za-z_][A-Za-z0-9_]*)(?:\s*:.*)?$", stripped)
+
+        if m:
+            name = m.group(1).strip()
+            if name and name.lower() not in {"entity", "entities"} and name not in seen:
+                seen.add(name)
+                entities.append(name)
+
+    return entities
+
+
+def architecture_compliance_issue(section_content: str, row_label: str, expected_suffix):
+    if not expected_suffix:
+        return None
+    row_marker = row_label.lower()
+    for line in section_content.splitlines():
+        if row_marker not in line.lower():
+            continue
+        if "|" not in line:
+            continue
+        normalized = line.replace(" ", "")
+        if expected_suffix in line:
+            return None
+        if expected_suffix in normalized:
+            return None
+        if "{{" in line and "}}" in line:
+            return (
+                "Architecture Compliance table includes unresolved naming placeholder "
+                f"for {row_label}."
+            )
+        return (
+            "Architecture Compliance table has naming row for "
+            f"{row_label} but does not include resolved suffix '{expected_suffix}'."
+        )
+    return (
+        "Architecture Compliance table is missing required naming row: "
+        f"{row_label}"
+    )
+
+
+naming_rules = normalize_naming_rules(json_naming_rules)
+expected_rules = []
+for key in [
+    "entity",
+    "dto",
+    "use_case",
+    "repository",
+    "repository_impl",
+    "event",
+    "controller",
+    "data_source",
+    "provider",
+]:
+    if key in naming_rules:
+        rule = naming_rules[key]
+        suffix = naming_suffix(rule)
+        if suffix:
+            expected_rules.append((key, rule, suffix))
+
+expected_entity_rule = naming_rules.get("entity", "")
+expected_entity_suffix = naming_suffix(expected_entity_rule)
+
+if expected_rules:
+    arch = sections.get("## Architecture Compliance", "")
+    for key, _, suffix in expected_rules:
+        arch_check = architecture_compliance_issue(
+            arch, naming_row_label(key), suffix
+        )
+        if arch_check:
+            issue_messages.append(arch_check)
+
+if expected_entity_suffix:
+    domain_entities = parse_domain_entities(text)
+    missing_suffix_entities = [
+        entity_name
+        for entity_name in domain_entities
+        if not entity_name.endswith(expected_entity_suffix)
+    ]
+    if missing_suffix_entities:
+        display_rule = (
+            expected_entity_rule
+            if expected_entity_rule
+            else expected_entity_suffix
+        )
+        violation = (
+            "Domain entities in spec.md do not follow naming policy (`Entities: "
+            + display_rule
+            + "`): "
+            + ", ".join(sorted(missing_suffix_entities))
+        )
+        naming_policy_violations.append(violation)
+        issue_messages.append(violation)
+
 ok = not (
     missing_sections
     or empty_sections
@@ -262,6 +479,8 @@ result = {
     "unresolved_clarifications": unresolved_clarifications,
     "concrete_ui_terms": sorted(concrete_ui_terms),
     "forbidden_naming_terms": sorted(forbidden_naming_terms),
+    "naming_policy": naming_rules,
+    "naming_policy_violations": naming_policy_violations,
 }
 
 if json_mode:

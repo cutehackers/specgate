@@ -265,6 +265,24 @@ Meaningful, explicit naming is a code quality requirement:
    - ❌ Avoid: `utils.dart`, `helpers.dart`, `Util`, `Helper`, `Manager`
    - ✅ Use: `email_validator.dart`, `date_formatter.dart`, `network_error_handler.dart`
 
+2-1. **Machine-readable Naming Policy (Authoritative)**
+
+```json
+{
+  "naming": {
+    "entity": "{Name}Entity",
+    "dto": "{Name}Dto",
+    "use_case": "{Action}UseCase",
+    "repository": "{Feature}Repository",
+    "repository_impl": "{Feature}RepositoryImpl",
+    "event": "{Feature}{Action}Event",
+    "controller": "{Feature}Controller",
+    "data_source": "{Feature}{Type}DataSource",
+    "provider": "{featureName}{Type}Provider"
+  }
+}
+```
+
 3. **Documentation & Comments**
    - Public APIs MUST have dartdoc comments (three slashes: `///`)
    - Code comments explain _why_, not _what_ (e.g., "Added 15% buffer to prevent scheduling conflicts")

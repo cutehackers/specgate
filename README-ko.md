@@ -200,26 +200,29 @@ bash /tmp/specgate-install.sh --uninstall --ai codex --codex-target home --prefi
   - 워크플로우 전용 SKILL.md: `feature-set`, `specify`, `clarify`, `codify`, `checklist`, `analyze`, `test-specify`, `test-codify`, `taskstoissues`, `constitution`, `feature-done`
 - `.opencode/command/*`
 - `docs/SPECGATE.md`
+- `.specify/scripts/bash/check-naming-policy.sh`
+- `.specify/scripts/bash/run-feature-workflow-sequence.sh`
 
 참고: `--ai codex`, `--ai claude` 등 단일 에이전트 설치시에도 `.specify` 및 `docs/SPECGATE.md`는 항상 함께 설치됩니다.
 
 ## 6) 일일 점검 가이드 (smoke check 대체)
 
-레포 루트에서 다음을 실행하면 기본 점검이 가능합니다.
+운영 시 특성 기준 점검은 레포 루트에서 아래 시퀀스를 실행하세요.
 
 ```bash
-bash -n .specify/scripts/bash/check-code-prerequisites.sh \
-  .specify/scripts/bash/check-implementation-readiness.sh \
-  .specify/scripts/bash/check-implementation-quality.sh \
-  .specify/scripts/bash/check-spec-prerequisites.sh \
-  .specify/scripts/bash/check-test-prerequisites.sh \
-  .specify/scripts/bash/check-test-coverage-targets.sh \
-  .specify/scripts/bash/specgate-sync-pointer.sh \
-  .specify/scripts/bash/specgate-status.sh \
-  .specify/scripts/bash/setup-code.sh \
-  .specify/scripts/bash/setup-test-spec.sh
+bash .specify/scripts/bash/run-feature-workflow-sequence.sh --feature-dir <abs-feature-path> --json
+```
 
-./.specify/scripts/bash/specgate-status.sh
+strict naming은 기본값입니다. 레거시 산출물 상태에서 임시로 우회하려면 다음을 사용하세요.
+
+```bash
+bash .specify/scripts/bash/run-feature-workflow-sequence.sh --feature-dir <abs-feature-path> --json --no-strict-naming
+```
+
+코드 템플릿 재생성이 필요하면 운영 점검 시 다음을 포함할 수 있습니다.
+
+```bash
+bash .specify/scripts/bash/run-feature-workflow-sequence.sh --feature-dir <abs-feature-path> --json --setup-code
 ```
 
 `specgate-smoke-check.sh`는 설치 검증(예: 신규 환경 확인)용으로는 유지되지만, 일일 반복 점검용으로는 권장되지 않습니다.

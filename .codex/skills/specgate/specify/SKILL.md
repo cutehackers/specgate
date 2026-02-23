@@ -63,13 +63,13 @@ Given that feature description, do this:
      1. `<FEATURE_DIR>/docs/ARCHITECTURE.md` or `<FEATURE_DIR>/docs/architecture.md` only if it contains a usable naming section:
         - heading is one of `Naming Rules`, `Naming Convention`, `Naming Policy`
         - heading matches `^#{1,4}\s*Naming\s+(Rules|Convention|Policy)\s*$` (case-insensitive)
-        - the section has at least one concrete, non-placeholder rule line
+        - the section has at least one machine-readable `json` code-block rule
      2. If no usable section, fallback to:
         - `<FEATURE_DIR>/docs/constitution.md`
         - `<FEATURE_DIR>/constitution.md`
         - `<REPO_ROOT>/.specify/memory/constitution.md`
      3. If none found, use repository default naming guardrails enforced by current SpecGate checks.
-   - Do not fail when architecture naming section is absent; proceed with Constitution fallback and log the final resolved source.
+   - Do not fail in general flow when source is absent, but `run-feature-workflow-sequence --strict-naming` should stop unless `--no-strict-naming` is used.
    - Record the selected source in workflow context for later steps (`ARCHITECTURE`, `CONSTITUTION`, `DEFAULT`).
 
 2. **Optional branch creation** (only if `--create-branch` is present):

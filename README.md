@@ -199,26 +199,30 @@ bash /tmp/specgate-install.sh --uninstall --ai codex --codex-target home --prefi
   - Includes workflow-dedicated skills: `feature-set`, `specify`, `clarify`, `codify`, `checklist`, `analyze`, `test-specify`, `test-codify`, `taskstoissues`, `constitution`, `feature-done`
 - `.opencode/command/*`
 - `docs/SPECGATE.md`
+- `.specify/scripts/bash/check-naming-policy.sh`
+- `.specify/scripts/bash/run-feature-workflow-sequence.sh`
 
 Note: `.specify` and `docs/SPECGATE.md` are always installed together for single-agent installs (`--ai codex`, `--ai claude`, etc.).
 
 ## 6) Recommended checks (instead of daily smoke check)
 
-Run from repository root:
+Run production workflow checks from repository root:
 
 ```bash
-bash -n .specify/scripts/bash/check-code-prerequisites.sh \
-  .specify/scripts/bash/check-implementation-readiness.sh \
-  .specify/scripts/bash/check-implementation-quality.sh \
-  .specify/scripts/bash/check-spec-prerequisites.sh \
-  .specify/scripts/bash/check-test-prerequisites.sh \
-  .specify/scripts/bash/check-test-coverage-targets.sh \
-  .specify/scripts/bash/specgate-sync-pointer.sh \
-  .specify/scripts/bash/specgate-status.sh \
-  .specify/scripts/bash/setup-code.sh \
-  .specify/scripts/bash/setup-test-spec.sh
+bash .specify/scripts/bash/run-feature-workflow-sequence.sh --feature-dir <abs-feature-path> --json
 
-./.specify/scripts/bash/specgate-status.sh
+```
+
+Strict naming is enabled by default. If a feature is still on a legacy artifact state, temporarily run with:
+
+```bash
+bash .specify/scripts/bash/run-feature-workflow-sequence.sh --feature-dir <abs-feature-path> --json --no-strict-naming
+```
+
+For full production check, include a temporary setup step when you want code-template regeneration:
+
+```bash
+bash .specify/scripts/bash/run-feature-workflow-sequence.sh --feature-dir <abs-feature-path> --json --setup-code
 ```
 
 `specgate-smoke-check.sh` remains available as an installation validation script, but is not recommended as a routine daily check.

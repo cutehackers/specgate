@@ -8,8 +8,13 @@
 - **Updated**: [DATE]
 - **Spec**: `<feature_dir>/docs/spec.md`
 - **Code Spec**: `<feature_dir>/docs/tasks.md`
-- **Architecture Baseline**: `docs/ARCHITECTURE.md` (naming fallback to constitution if section missing)
+- **Architecture Baseline**: `docs/ARCHITECTURE.md`
+- **Naming Source**: `<resolved docs/ARCHITECTURE.md or constitution path>`
+- **Naming Policy Rules**: <{{NAMING_RULES}}>
 - **Testing Baseline**: `docs/TESTING_STANDARDS.md` (fallback: `.specify/memory/constitution.md`)
+
+> Use `NAMING_SOURCE_FILE` from a machine-readable `json` code block in
+> `docs/ARCHITECTURE.md`/`docs/architecture.md` or constitution.
 
 ## Summary
 

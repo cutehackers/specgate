@@ -56,18 +56,19 @@ to refresh pointer progress before clarification edits.
 
 1.1 **Resolve naming policy source**:
    - Let `FEATURE_DIR` be the resolved absolute feature directory.
-   - Resolve naming policy in this precedence:
-     1. `<FEATURE_DIR>/docs/ARCHITECTURE.md` 또는 `<FEATURE_DIR>/docs/architecture.md`에서 다음 중 하나의 제목이 있고 실제 규칙 내용이 있으면 사용:
+   - Resolve naming policy using this precedence:
+     1. Use `<FEATURE_DIR>/docs/ARCHITECTURE.md` or `<FEATURE_DIR>/docs/architecture.md` when any of the following applies:
         - `Naming Rules`
         - `Naming Convention`
         - `Naming Policy`
-        - 매칭 정규식: `^#{1,4}\s*Naming\s+(Rules|Convention|Policy)\s*$` (대소문자 무시)
-     2. 사용 불가 시 fallback:
+        - Heading regex match: `^#{1,4}\s*Naming\s+(Rules|Convention|Policy)\s*$` (case-insensitive)
+        - The section contains non-empty naming policy content
+     2. If unusable, fallback:
         - `<FEATURE_DIR>/docs/constitution.md`
         - `<FEATURE_DIR>/constitution.md`
         - `<REPO_ROOT>/.specify/memory/constitution.md`
-     3. 그래도 없으면 레포 기본 네이밍 가드레일 적용(오류 중단 X).
-   - `NAMING_SOURCE_FILE` 값을 최종 보고에 사용하기 위해 보관한다.
+     3. If still missing, apply repository default naming guardrails (non-blocking for this workflow).
+   - Keep `NAMING_SOURCE_FILE` for use in final reporting.
 
 2. Run `.specify/scripts/bash/check-prerequisites.sh --json --paths-only --feature-dir "<abs path>"` from repo root **once** (combined `--json --paths-only` mode / `-Json -PathsOnly`). Parse minimal JSON payload fields:
    - `FEATURE_DIR`

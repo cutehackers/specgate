@@ -9,6 +9,10 @@
 - **Spec Source**: `<feature_dir>/docs/spec.md`
 - **Architecture Baseline**: `docs/ARCHITECTURE.md`
 - **Naming Source**: `<resolved docs/ARCHITECTURE.md or constitution path>`
+- **Naming Policy Rules**: <{{NAMING_RULES}}>
+
+> Use `NAMING_SOURCE_FILE` from a machine-readable `json` code block in
+> `docs/ARCHITECTURE.md`/`docs/architecture.md` or constitution.
 
 ## Summary
 
@@ -30,6 +34,15 @@
 | Domain framework-agnostic | [PASS/OPEN] | [note] |
 | Riverpod state boundary clarity | [PASS/OPEN] | [note] |
 | Presentation abstraction-only policy | [PASS/OPEN] | [note] |
+| Entity naming rule from resolved naming source (`{{ENTITY_SUFFIX}}`) | [PASS/OPEN] | [note] |
+| DTO naming rule from resolved naming source (`{{DTO_SUFFIX}}`) | [PASS/OPEN] | [note] |
+| Use Case naming rule from resolved naming source (`{{USE_CASE_SUFFIX}}`) | [PASS/OPEN] | [note] |
+| Repository naming rule from resolved naming source (`{{REPOSITORY_SUFFIX}}`) | [PASS/OPEN] | [note] |
+| Repository Impl naming rule from resolved naming source (`{{REPOSITORY_IMPL_SUFFIX}}`) | [PASS/OPEN] | [note] |
+| Event naming rule from resolved naming source (`{{EVENT_SUFFIX}}`) | [PASS/OPEN] | [note] |
+| Controller naming rule from resolved naming source (`{{CONTROLLER_SUFFIX}}`) | [PASS/OPEN] | [note] |
+| Data Source naming rule from resolved naming source (`{{DATA_SOURCE_SUFFIX}}`) | [PASS/OPEN] | [note] |
+| Provider naming rule from resolved naming source (`{{PROVIDER_SUFFIX}}`) | [PASS/OPEN] | [note] |
 | Generic naming ambiguity policy (`utils.dart`, `helpers.dart`, `Util`, `Helper`, `Manager`) | [PASS/OPEN] | [note] |
 
 ## Screen Abstraction Contract

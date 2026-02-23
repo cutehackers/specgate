@@ -64,6 +64,7 @@ resolve_naming_source() {
     NAMING_SOURCE_KIND="DEFAULT"
     NAMING_SOURCE_FILE=""
     NAMING_SOURCE_REASON="No usable naming policy found; repository default naming guardrails apply."
+    NAMING_POLICY_JSON="{}"
 
     if [[ -z "$repo_root" ]]; then
         repo_root="$(get_repo_root)"
@@ -79,6 +80,7 @@ import os
 import re
 import sys
 from pathlib import Path
+import json
 
 feature_dir = Path(os.path.abspath(sys.argv[1])) if len(sys.argv) > 1 else None
 repo_root = Path(os.path.abspath(sys.argv[2])) if len(sys.argv) > 2 else None
@@ -89,13 +91,53 @@ if not feature_dir:
     print("reason=No feature directory provided; repository default naming guardrails apply.")
     raise SystemExit
 
-heading_re = re.compile(r"^\s*#{1,4}\s*Naming\s+(Rules|Convention|Policy)\s*$", re.IGNORECASE)
+# Accept architecture/constitution variants such as:
+# - Naming Rules
+# - Naming Conventions
+# - Naming Convention
+# - Naming Policy
+# - File and Class Naming Rules
+# - VI. Naming & Code Documentation
+heading_re = re.compile(r"^\s*#{1,6}\s+.+$", re.IGNORECASE)
+allowed_heading_markers = ("naming",)
+
 placeholder_re = re.compile(
     r"^(?:\[[ xX]\]\s*)?"
     r"(?:todo|tbd|to be determined|to be defined|n/a|na|none|placeholder)\b.*$",
     re.IGNORECASE,
 )
 markdown_heading_re = re.compile(r"^\s*#{1,4}\s+\S", re.IGNORECASE)
+
+
+def is_naming_heading(line: str) -> bool:
+    raw = line.strip()
+    if not heading_re.match(raw):
+        return False
+    if not raw.startswith("#"):
+        return False
+
+    title = re.sub(r"^\s*#{1,6}\s*", "", raw)
+    title = re.sub(r"^[0-9IVXivx]+\.\s*", "", title)
+    title = title.lower()
+    if "naming" not in title:
+        return False
+
+    if re.match(r"^naming\b", title):
+        return True
+
+    markers = (
+        "rule",
+        "rules",
+        "convention",
+        "conventions",
+        "policy",
+        "guideline",
+        "guidelines",
+        "standard",
+        "standards",
+        "documentation",
+    )
+    return any(marker in title for marker in markers)
 
 
 def is_meaningful_line(line: str) -> bool:
@@ -145,7 +187,7 @@ def section_text(path: Path):
 
     in_code_block = False
     for raw_line in text.splitlines():
-        if heading_re.match(raw_line):
+        if is_naming_heading(raw_line):
             in_section = True
             buffer = []
             continue
@@ -168,6 +210,102 @@ def section_text(path: Path):
     return joined if has_meaningful_content(joined) else None
 
 
+def parse_naming_rules(path: Path):
+    if not path.is_file():
+        return {}
+
+    text = path.read_text(encoding="utf-8", errors="ignore")
+
+    def coerce_rules(raw_rules):
+        if not isinstance(raw_rules, dict):
+            return None
+
+        nested = raw_rules.get("naming")
+        if isinstance(nested, dict):
+            raw_rules = {**raw_rules, **nested}
+
+        normalized = {}
+        for key, value in raw_rules.items():
+            if key == "naming":
+                continue
+            if not isinstance(value, str):
+                continue
+            normalized[key.lower().replace("-", "_")] = value.strip()
+
+        required = {
+            "entity",
+            "dto",
+            "use_case",
+            "repository",
+            "repository_impl",
+            "event",
+            "controller",
+            "data_source",
+            "provider",
+        }
+        if not (set(normalized) & required):
+            return None
+
+        return normalized if normalized else None
+
+    def parse_fenced_blocks(block_text: str):
+        # Match both backtick and tilde fenced blocks, with optional language tag.
+        backtick = chr(96) * 3
+        fence_re = re.compile(
+            r"(?ms)(^|\n)(?P<fence>" + re.escape(backtick) + r"|~{3})\s*(?P<lang>[A-Za-z0-9_-]+)?\s*\n"
+            r"(?P<body>.*?)(?=\n(?P=fence)(?:\s|$))"
+        )
+
+        for match in fence_re.finditer(block_text):
+            lang = (match.group("lang") or "").strip().lower()
+            body = match.group("body").strip()
+            if not body:
+                continue
+
+            if lang != "json":
+                continue
+
+            try:
+                loaded = json.loads(body)
+                normalized = coerce_rules(loaded)
+                if normalized:
+                    return normalized
+            except Exception:
+                continue
+
+        return None
+
+    section_only = section_text(path)
+    if section_only is None:
+        section_only = ""
+
+    parsed = parse_fenced_blocks(section_only)
+    if parsed:
+        return parsed
+
+    try:
+        parsed_json = json.loads(section_only)
+        coerce = coerce_rules(parsed_json)
+        if coerce:
+            return coerce
+    except Exception:
+        pass
+
+    parsed = parse_fenced_blocks(text)
+    if parsed:
+        return parsed
+
+    try:
+        parsed_json = json.loads(text)
+        coerce = coerce_rules(parsed_json)
+        if coerce:
+            return coerce
+    except Exception:
+        pass
+
+    return {}
+
+
 def has_meaningful_file(path: Path) -> bool:
     if not path.is_file():
         return False
@@ -181,19 +319,24 @@ if repo_root is not None:
     constitution_candidates.append(repo_root / ".specify" / "memory" / "constitution.md")
 
 for candidate in arch_candidates:
-    if section_text(candidate):
+    rules = parse_naming_rules(candidate)
+    if rules:
+        print("rules=" + json.dumps(rules))
         print("kind=ARCHITECTURE")
         print(f"file={candidate}")
         print("reason=Architecture naming section found and contains concrete rules.")
         raise SystemExit
 
 for candidate in constitution_candidates:
-    if has_meaningful_file(candidate):
+    rules = parse_naming_rules(candidate)
+    if rules:
+        print("rules=" + json.dumps(rules))
         print("kind=CONSTITUTION")
         print(f"file={candidate}")
         print("reason=Fallback constitution used per naming policy order.")
         raise SystemExit
 
+print("rules=" + json.dumps(parse_naming_rules(feature_dir)))
 print("kind=DEFAULT")
 print("file=")
 print("reason=No usable naming policy found; repository default naming guardrails apply.")
@@ -206,6 +349,7 @@ PY
                 kind=*) NAMING_SOURCE_KIND="${pair#kind=}" ;;
                 file=*) NAMING_SOURCE_FILE="${pair#file=}" ;;
                 reason=*) NAMING_SOURCE_REASON="${pair#reason=}" ;;
+                rules=*) NAMING_POLICY_JSON="${pair#rules=}" ;;
             esac
         done <<< "$python_result"
     fi
@@ -253,6 +397,7 @@ get_feature_paths() {
     printf 'NAMING_SOURCE_KIND=%q\n' "$NAMING_SOURCE_KIND"
     printf 'NAMING_SOURCE_FILE=%q\n' "$NAMING_SOURCE_FILE"
     printf 'NAMING_SOURCE_REASON=%q\n' "$NAMING_SOURCE_REASON"
+    printf 'NAMING_POLICY_JSON=%q\n' "$NAMING_POLICY_JSON"
 }
 
 check_file() { [[ -f "$1" ]] && echo "  ✓ $2" || echo "  ✗ $2"; }

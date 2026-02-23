@@ -54,18 +54,17 @@ Default execution flow: `/specify` -> `/clarify` -> `/codify` -> `/test-specify`
      .specify/scripts/bash/specgate-sync-pointer.sh --feature-dir "<abs path>" --preserve-stage --json
      ```
      to refresh pointer progress before implementation.
-   - Resolve naming policy source for coding checks:
-     1. `<FEATURE_DIR>/docs/ARCHITECTURE.md` 또는 `<FEATURE_DIR>/docs/architecture.md`에서 아래 중 하나의 제목이 있고 실사용 가능한 규칙이 있으면 사용:
-        - `Naming Rules`
-        - `Naming Convention`
-        - `Naming Policy`
-        - 정규식: `^#{1,4}\s*Naming\s+(Rules|Convention|Policy)\s*$` (대소문자 무시)
-     2. 위 조건이 없으면 fallback:
+ - Resolve naming policy source for coding checks:
+     1. Use `<FEATURE_DIR>/docs/ARCHITECTURE.md` or `<FEATURE_DIR>/docs/architecture.md` when it has one of:
+        - A section heading `Naming Rules`, `Naming Convention`, or `Naming Policy`
+        - A matching heading regex `^#{1,4}\s*Naming\s+(Rules|Convention|Policy)\s*$` (case-insensitive)
+        - A usable naming rule in a JSON code block
+     2. If none of the above apply, fallback to:
         - `<FEATURE_DIR>/docs/constitution.md`
         - `<FEATURE_DIR>/constitution.md`
         - `<REPO_ROOT>/.specify/memory/constitution.md`
-     3. 모두 없으면 기본 repository 네이밍 가드레일 사용.
-   - 결과를 `NAMING_SOURCE_FILE`로 보관한다.
+     3. If still missing, use default repository naming guardrails. Strict production sequence requires `--no-strict-naming` or pre-correction.
+   - Persist result as `NAMING_SOURCE_FILE`.
    - Then run `.specify/scripts/bash/setup-code.sh --json --feature-dir "<abs path>"` from repo root and parse JSON for FEATURE_SPEC, CODE_DOC, FEATURE_DIR, FEATURE_DOCS_DIR.
    - Resolve required artifact paths from FEATURE_DOCS_DIR:
      - `DATA_MODEL=<FEATURE_DOCS_DIR>/data-model.md`

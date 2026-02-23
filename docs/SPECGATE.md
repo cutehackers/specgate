@@ -162,6 +162,8 @@ Use the following when needed:
 Run in project root after commands (or before merging):
 
 ```bash
+bash .specify/scripts/bash/run-feature-workflow-sequence.sh --feature-dir <abs-feature-path> [--json] [--setup-code] [--strict-naming]
+
 bash -n .specify/scripts/bash/check-code-prerequisites.sh \
   .specify/scripts/bash/check-implementation-readiness.sh \
   .specify/scripts/bash/check-implementation-quality.sh \
@@ -177,6 +179,11 @@ bash -n .specify/scripts/bash/check-code-prerequisites.sh \
 ```
 
 Tip: `specgate-smoke-check.sh` is kept as an installation validation script, not a daily routine.
+
+`run-feature-workflow-sequence.sh` is the production-style day-to-day gate sequence:
+`check-prerequisites --paths-only --json` → (optional `check-naming-policy --strict-naming --json`) → `check-spec-prerequisites --json` → `check-code-prerequisites --json` (and optionally `setup-code --json`).
+
+`--strict-naming` enforces that `naming` conventions in architecture or constitution documents are defined in machine-readable JSON code blocks.
 
 Tip: if your environment blocks some tools, use fallback options documented in the scripts.
 
