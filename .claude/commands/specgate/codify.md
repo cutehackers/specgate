@@ -65,7 +65,14 @@ Default execution flow: `/specify` -> `/clarify` -> `/codify` -> `/test-specify`
         - `<REPO_ROOT>/.specify/memory/constitution.md`
      3. If still missing, use default repository naming guardrails. Strict production sequence requires `--no-strict-naming` or pre-correction.
    - Persist result as `NAMING_SOURCE_FILE`.
+   - Resolve layer policy source for coding checks:
+     1. Use feature or repository layer rules (`layer_rules` blocks).
+     2. Use `.specify/layer_rules/contract.yaml` and `.specify/layer_rules/overrides/<feature-id>.yaml`.
+     3. If strict mode is required and no layer policy is resolved, stop and bootstrap via `bootstrap-layer-rules.sh`.
    - Then run `.specify/scripts/bash/setup-code.sh --json --feature-dir "<abs path>"` from repo root and parse JSON for FEATURE_SPEC, CODE_DOC, FEATURE_DIR, FEATURE_DOCS_DIR.
+     - Keep layer context from JSON output:
+       - `LAYER_RULES_SOURCE_KIND`, `LAYER_RULES_SOURCE_FILE`, `LAYER_RULES_SOURCE_REASON`,
+       - `LAYER_RULES_POLICY_JSON`, `LAYER_RULES_RESOLVED_PATH`, `LAYER_RULES_HAS_LAYER_RULES`.
    - Resolve required artifact paths from FEATURE_DOCS_DIR:
      - `DATA_MODEL=<FEATURE_DOCS_DIR>/data-model.md`
      - `SCREEN_ABSTRACTION=<FEATURE_DOCS_DIR>/screen_abstraction.md`
@@ -101,28 +108,35 @@ Default execution flow: `/specify` -> `/clarify` -> `/codify` -> `/test-specify`
    - Confirm `quickstart.md` has executable validation scenarios.
    - Confirm implemented naming identifiers align with resolved naming source:
      - entity names, events, screen IDs, and task naming conventions follow the selected policy.
+   - Confirm resolved layer policy can be enforced:
+     - mapping Domain/Data/Presentation target files to the corresponding restrictions,
+     - and use-case behavior constraints are checked before code finalization.
 
 4. **Execute implementation from tasks.md**:
    - `/codify` does not generate/overwrite planning artifacts; it must only consume `screen_abstraction.md`, `data-model.md`, `quickstart.md`, and `tasks.md` to implement code and tests.
-   - Parse `tasks.md` and implement tasks in dependency order:
+  - Parse `tasks.md` and implement tasks in dependency order:
      - `P1` tasks first, then `P2`, then `P3`.
      - Respect `[P]` parallel markers and explicit dependency notes.
-   - For each task:
+  - For each task:
      - implement code artifacts in the target repo paths
+     - enforce layer restrictions from resolved policy before finalizing each touched file.
      - add/adjust tests for changed behavior
      - include quickstart-linked validation when task scope applies
      - update task status to `[x]` only after verification.
    - If a task is blocked by unresolved ambiguity, mark it pending and route the blocker to `/clarify` immediately.
 
 5. **Implementation validation**:
-   - Validate touched areas against `quickstart.md` scenarios and relevant contract assumptions.
-   - Run `.specify/scripts/bash/check-implementation-quality.sh --feature-dir "<abs path>" --json` and stop on failure.
-   - Run targeted project tests that cover implemented P1/P2 tasks.
+  - Validate touched areas against `quickstart.md` scenarios and relevant contract assumptions.
+  - Run `.specify/scripts/bash/check-layer-compliance.sh --feature-dir "<abs path>" --strict-layer --json`.
+    - If any strict violations remain, stop and fix before running implementation quality.
+  - Run `.specify/scripts/bash/check-implementation-quality.sh --feature-dir "<abs path>" --json` and stop on failure.
+  - Run targeted project tests that cover implemented P1/P2 tasks.
 
 6. **Run code gate**: Execute `.specify/scripts/bash/check-code-prerequisites.sh --feature-dir "<abs path>"` and stop on failure.
 
 7. **Stop and report**: Report feature directory, CODE_DOC path, executed task IDs, test results, and confirm pointer is in `coding` stage (`current_doc: tasks.md`).
    - Include naming source category (`ARCHITECTURE`/`CONSTITUTION`/`DEFAULT`) and path for traceability.
+   - Include layer source category (`CONTRACT`/`OVERRIDE`/`ARCHITECTURE`/`CONSTITUTION`/`DEFAULT`) and path for traceability.
 
 ## Phases
 

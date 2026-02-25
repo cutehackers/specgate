@@ -1,292 +1,287 @@
 # SpecGate Guide
 
-SpecGate is the Spec-driven Development (SDD) workflow used by Claude, OpenCode, and Codex.
-It helps you move through one clear flow:
+SpecGate is the Spec-Driven Development (SDD) workflow for Claude, OpenCode, and Codex.
+One clear flow is defined:
 
 `/specify -> /clarify -> /codify -> /test-specify -> /test-codify`
 
-This repository is the installation package only; after installation, work is done inside your project.
+This repository only contains the installer and runtime assets.
+Actual project work happens in your consumer repo.
 
 ---
 
-## 0. Advanced install guide (main package reference)
+## 0) Use this guide with README first
 
-This file contains detailed install details and standard workflow notes.
+- Korean docs: [`README-ko.md`](../README-ko.md)
+- English docs: [`README.md`](../README.md)
 
-If you are a new user, use the top-level quick-start section in:
-
-- [`README.md`](../README.md) (English)
-- [`README-ko.md`](../README-ko.md) (Korean)
-
-If you want one-command examples without section headers, use:
+If you need one-command quick start:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh \
   | bash -s -- --preset claude --prefix .
 ```
 
-Continue with the sections below for multi-agent mapping, options matrix, and edge cases.
-
-## 1. Quick installation check
-
-Install into current directory:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
-bash /tmp/specgate-install.sh --preset claude --prefix .
-```
-
-Verify files:
-
-```bash
-ls -la .specify .claude .codex .opencode
-```
-
-If install is affected by a partially broken previous install, run:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
-bash /tmp/specgate-install.sh --clean --preset claude --prefix .
-```
-
-Then start using commands from your agent:
-
-- `/feature-set`
-- `/specify`
-- `/clarify`
-- `/codify`
-- `/checklist`
-- `/analyze`
-- `/test-specify`
-- `/test-codify`
-- `/taskstoissues`
-- `/constitution`
-- `/feature-done`
-
-For Codex, use workflow SKILLs in `.codex/skills/specgate/*/SKILL.md` directly.  
-When a workflow needs user input, do not use `AskUserQuestion`; ask the user directly in chat and wait for their response.
-
-## 1.1) Install / Update / Remove by agent
-
-Choose the right one-line pattern first, then run just the action you need.
-
-### Claude
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
-bash /tmp/specgate-install.sh --preset claude --prefix .
-bash /tmp/specgate-install.sh --update --preset claude --prefix .
-bash /tmp/specgate-install.sh --uninstall --preset claude --prefix .
-```
-
-### Opencode
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
-bash /tmp/specgate-install.sh --preset opencode --prefix .
-bash /tmp/specgate-install.sh --update --preset opencode --prefix .
-bash /tmp/specgate-install.sh --uninstall --preset opencode --prefix .
-```
-
-### Codex (project)
-
-`--preset codex` uses project scope.
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
-bash /tmp/specgate-install.sh --preset codex --prefix .
-bash /tmp/specgate-install.sh --update --preset codex --prefix .
-bash /tmp/specgate-install.sh --uninstall --preset codex --prefix .
-```
-
-### Codex (home)
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
-bash /tmp/specgate-install.sh --preset codex-home --prefix .
-bash /tmp/specgate-install.sh --update --preset codex-home --prefix .
-bash /tmp/specgate-install.sh --uninstall --preset codex-home --prefix .
-```
-
 ---
 
-## 2. What SpecGate manages
+## 1) What SpecGate manages
 
-- `.specify` : workflow scripts and templates
+- `.specify` : scripts and templates
 - `.claude/commands/specgate/*`
 - `.opencode/command/*`
 - `.claude/hooks/statusline.js`
-- `.codex/skills/specgate/*`
-- workflow-specific Codex skills under `.codex/skills/specgate/*/SKILL.md`
-- `docs/SPECGATE.md` (this file)
+- `.codex/skills/specgate/*` (or `~/.codex/skills/specgate/*` for home scope)
+- `docs/SPECGATE.md` (this document)
+- `.specify/scripts/bash/run-feature-workflow-sequence.sh`
+- `.specify/scripts/bash/check-naming-policy.sh`
 
-`specs/feature-stage.local.json` is not included in initial install.
-It is created when you run `/feature-set`.
+`specs/feature-stage.local.json` is created only in consumer projects via `/feature-set`.
 
 ---
 
-## 3. Install options (from install.sh)
+## 2) Install options (install.sh)
 
 ```text
---prefix <path>     Install target directory (default: .)
---dry-run           Show plan only; no files are changed
---force             Overwrite existing target files/directories (no backup)
---update            Update only changed files in-place (no backup files)
---clean             Remove selected SpecGate assets and reinstall
---version <name>    Install from branch/tag (default: main)
---preset <name>     Preset profile: claude | opencode | codex | codex-home | all
---ai <list>         Install scope
---agent <list>      Alias for --ai
---codex-target <project|home>  Where to install Codex Agent Skills when --ai includes codex (default: project)
---uninstall         Remove SpecGate assets instead of installing
+--prefix <path>               Install target directory (default: .)
+--dry-run                     Show plan only
+--force                       Overwrite existing files (no backup)
+--update                      Update changed files only
+--clean                       Remove selected assets and reinstall
+--version <name>              Branch/tag to install (default: main)
+--preset <name>               claude | opencode | codex | codex-home | all
+--ai <list>                   Install scope (alias: --agent)
+--agent <list>                Alias of --ai
+--codex-target <project|home> Codex skill install target (default: project)
+--uninstall                   Remove assets
 ```
 
 Notes:
-- install, uninstall, clean, and update operations do not generate backup files.
-- `--update` is idempotent for unchanged files: it skips files that have not changed.
 
-Tips:
-
-- `--clean` is the recommended reset mode for an interrupted or partial install.
-- `--update` is the recommended mode for updating changed files without reinstalling.
-- Empty directories in target locations are treated as empty install targets and are replaced automatically.
+- Install/update/remove/clean operations do not create backup files.
+- `--update` is idempotent for unchanged files.
 
 ---
 
-## 4. Standard workflow (first time)
+## 3) Standard workflow and quality gates
 
-1. Run `/feature-set <feature-folder-path>`
-2. Run `/specify`
-3. Run `/clarify`
-4. Run `/codify`
-5. Optionally run `/checklist` to validate requirement quality
-6. Run `/test-specify`
-7. Run `/test-codify`
-8. Optionally run `/analyze` after `/test-codify` or before `/feature-done`
-9. Optionally run `/taskstoissues` to sync implementation tasks to GitHub issues
-10. Optionally run `/constitution` when governance rules change
-11. Run `/feature-done`
+### 3.1 Normal command sequence
 
-### Where each command should end
+1. `/feature-set`
+2. `/specify`
+3. `/clarify`
+4. `/codify`
+5. `/test-specify`
+6. `/test-codify`
 
-- `spec.md` and checklist sections from `/specify` should be complete for that feature.
-- `/clarify` must generate `data-model.md`, `screen_abstraction.md`, `quickstart.md`, and refresh `tasks.md`.
-- `research.md` ownership is explicit:
-  - `/specify` creates and owns the baseline ambiguity/dependency record.
-  - `/clarify` may update `research.md` only when ambiguity resolution changes external assumptions or previously unresolved requirements.
-  - `/codify` must treat `research.md` as read-only implementation input.
-- `/codify` must implement all `tasks.md` P1 items and all `[P2][BLOCKING]` items.
-- `/checklist` should close with a completed checklist artifact and noted non-blocking improvements.
-- `/test-specify` creates a single test execution queue in `test-spec.md`.
-- `/test-codify` should consume that queue.
-- `/analyze` should output findings and next recommended command.
-- `/taskstoissues` should map only actionable `tasks.md` tasks to issue requests.
-- `/constitution` should keep templates and project policy aligned.
-- `/feature-done` should end after cleanup and validation.
+### 3.2 Output contract
 
-If a step fails:
-- Run `/feature-set` again when you see `No SpecGate pointer found`.
-- Re-run the failed command first, then continue.
+- `/specify` : `spec.md`, `research.md`
+- `/clarify` : `data-model.md`, `screen_abstraction.md`, `quickstart.md`, `tasks.md`
+- `/codify` : implementation from `tasks.md` + `/clarify` artifacts only
+- `/test-specify` and `/test-codify` : `test-spec.md`
+- `specs/feature-stage.local.json` exists only inside consumer repository
 
----
+### 3.3 Recommended daily gate
 
-## 5. Pointer file (state tracking)
-
-SpecGate stores current flow state in:
-
-`specs/feature-stage.local.json`
-
-Example:
-
-```json
-{
-  "feature_dir": "/path/to/feature",
-  "stage": "specifying|clarifying|coding|test_planning|test_writing|done|blocked",
-  "current_doc": "spec.md|tasks.md|test-spec.md",
-  "progress": {
-    "code": { "done": 0, "total": 8 },
-    "test": { "done": 0, "total": 4 }
-  }
-}
-```
-
-Use the following when needed:
-
-- `specgate-status.sh` : current status print
-- `specgate-sync-pointer.sh --preserve-stage --feature-dir "<abs-path>"` : sync before/after stage changes
-- `specgate-sync-pointer.sh --feature-dir "<abs-path>" --json` : current progress only
-
----
-
-## 6. Quality gates (recommended)
-
-Run in project root after commands (or before merging):
+Run from repo root with feature directory:
 
 ```bash
-bash .specify/scripts/bash/run-feature-workflow-sequence.sh --feature-dir <abs-feature-path> [--json] [--setup-code] [--strict-naming]
-
-bash -n .specify/scripts/bash/check-code-prerequisites.sh \
-  .specify/scripts/bash/check-implementation-readiness.sh \
-  .specify/scripts/bash/check-implementation-quality.sh \
-  .specify/scripts/bash/check-spec-prerequisites.sh \
-  .specify/scripts/bash/check-test-prerequisites.sh \
-  .specify/scripts/bash/check-test-coverage-targets.sh \
-  .specify/scripts/bash/specgate-sync-pointer.sh \
-  .specify/scripts/bash/specgate-status.sh \
-  .specify/scripts/bash/setup-code.sh \
-  .specify/scripts/bash/setup-test-spec.sh
-
-./.specify/scripts/bash/specgate-status.sh
+bash .specify/scripts/bash/run-feature-workflow-sequence.sh --feature-dir <abs-feature-path> --json
 ```
 
-Tip: `specgate-smoke-check.sh` is kept as an installation validation script, not a daily routine.
+Strict naming is default. For legacy migration:
 
-`run-feature-workflow-sequence.sh` is the production-style day-to-day gate sequence:
-`check-prerequisites --paths-only --json` → (optional `check-naming-policy --strict-naming --json`) → `check-spec-prerequisites --json` → `check-code-prerequisites --json` (and optionally `setup-code --json`).
-
-`--strict-naming` enforces that `naming` conventions in architecture or constitution documents are defined in machine-readable JSON code blocks.
-
-Tip: if your environment blocks some tools, use fallback options documented in the scripts.
-
-## 7. Codex automation candidates (optional)
-
-For Codex users, the most stable automation candidates are:
-
-- `test-specify` (queue generation from accepted spec)
-- `test-codify` (deterministic test run loop execution)
-
-Both remain interactive-safe to run after plan/setup is stable, but the heavier requirement-rich workflows (`feature-set`, `specify`, `clarify`, `codify`, `feature-done`) should stay in SKILL execution because they include user decisions and branching.
-
-Suggested automation cadence:
-- `test-specify` weekly/hourly status refresh: run after upstream changes or when requirements are updated.
-- `test-codify` as a recurring loop: run only when `test-spec.md` task queue is ready and no blocking changes are pending.
+```bash
+bash .specify/scripts/bash/run-feature-workflow-sequence.sh --feature-dir <abs-feature-path> --json --no-strict-naming
+```
 
 ---
 
-## 8. Common mistakes (for beginners)
+## 4) Layer governance (strict-layer)
 
-- Do not use legacy command surfaces (`velospec`, `plan`, `tasks`, `tasks-test`) in this environment.
-- Do not put concrete Flutter widget or animation instructions into `tasks.md`/`test-spec.md`.
-- Do not write `clarify.md` after `/feature-done`.
-- If reinstalling into an existing project, use `--clean` (or `--force` for overwrite without backup).
+### 4.1 Purpose
+
+`strict-layer` verifies architecture/constitution layer constraints before codify-related tasks.
+Without explicit rules, implementation may bypass intended separation of layers.
+
+### 4.2 Where rules live in consumer projects
+
+- `.specify/layer_rules/contract.yaml`
+- `.specify/layer_rules/overrides/<feature-id>.yaml`
+- `.specify/layer_rules/resolved/<feature-id>.json`
+
+`contract.yaml` is the first-class policy source for all codify runs; feature overrides are layered on top.
+
+### 4.3 Policy generation and loading scripts
+
+#### bootstrap-layer-rules.sh
+
+Use this once when you want to initialize a project-level rule baseline and apply defaults.
+
+```bash
+bash .specify/scripts/bash/bootstrap-layer-rules.sh --repo-root . --feature-dir "<abs-feature-path>" --json
+```
+
+#### load-layer-rules.sh
+
+Load + merge + optionally write contract for feature-level governance.
+
+```bash
+bash .specify/scripts/bash/load-layer-rules.sh --source-dir "<abs-feature-path>" --repo-root . --json
+```
+
+`load-layer-rules.sh`는 YAML 문서 파싱 시 `PyYAML`(권장) 또는 `ruamel.yaml`이 필요합니다. 두 파서가 모두 없으면 `errors`가 발생하고 정책은 신뢰성 있게 적용되지 않습니다.
+
+Compatibility form:
+
+```bash
+bash .specify/scripts/bash/load-layer-rules.sh --feature-dir "<abs-feature-path>" --repo-root . --json
+```
+
+##### Merge sources
+
+- `.specify/layer_rules/contract.yaml` (global baseline)
+- `.specify/layer_rules/overrides/<feature-id>.yaml` (feature override, if exists)
+- `<feature>/docs/ARCHITECTURE.md`
+- `<feature>/docs/architecture.md`
+- `<feature>/docs/constitution.md`
+- `<feature>/constitution.md`
+
+##### `--source-dir` scanning policy
+
+`--source-dir` only checks fixed paths (no recursive search):
+
+- `<source-dir>/docs/ARCHITECTURE.md`
+- `<source-dir>/docs/architecture.md`
+- `<source-dir>/docs/constitution.md`
+- `<source-dir>/constitution.md`
+
+`--feature-id` is only used for feature override/resolved cache file naming:
+`.specify/layer_rules/overrides/<feature-id>.yaml`, `.specify/layer_rules/resolved/<feature-id>.json`.
+
+##### Recommended commands
+
+```bash
+# inspect resolved policy
+bash .specify/scripts/bash/load-layer-rules.sh \
+  --source-dir "<abs-feature-path>" \
+  --repo-root . \
+  --json
+
+# write merged result to contract.yaml
+bash .specify/scripts/bash/load-layer-rules.sh \
+  --source-dir "<abs-feature-path>" \
+  --repo-root . \
+  --write-contract \
+  --json
+
+# force overwrite existing contract.yaml
+bash .specify/scripts/bash/load-layer-rules.sh \
+  --source-dir "<abs-feature-path>" \
+  --repo-root . \
+  --write-contract \
+  --force-contract \
+  --json
+```
+
+Practical one-line form with a real architecture doc path:
+
+```bash
+bash .specify/scripts/bash/load-layer-rules.sh \
+  --source-dir "/Users/me/workspace/app/lib/src/features/home" \
+  --repo-root "/Users/me/workspace/app" \
+  --write-contract \
+  --force-contract \
+  --json
+```
+
+### 4.4 JSON output fields to check
+
+From `--json` output, confirm:
+
+- `source_kind`: origin type (`CONTRACT`, `OVERRIDE`, `CONSTITUTION`, `ARCHITECTURE`, `CONTRACT_GENERATED`, `DEFAULT`)
+- `source_file`: resolved source filename
+- `source_reason`: why that source was chosen
+- `has_layer_rules`: must be `true` under strict mode
+- `applied_sources`: merge history list
+- `resolved_path`: resolved JSON path
+- `contract_path`: path where merged contract was written
+- `contract_written`: boolean for `--write-contract` success
+- `parse_events`: ordered parser event log (attempt/fail/success) for YAML/JSON candidate extraction
+- `parse_summary`: aggregate counters for parser outcomes (`total`, `success`, `failed`, `schema_mismatch`, etc.)
+- `parse_summary` is used as a hard-fail gate in strict mode when:
+  - `failed > 0`
+  - `blocked_by_parser_missing > 0`
+- parser status codes to check in `parse_events`:
+  - `NO_YAML_PARSER_AVAILABLE`
+  - `YAML_PARSE_ERROR`
+  - `JSON_PARSE_ERROR`
+  - `POLICY_SCHEMA_MISSING`
+  - `JSON_FULL_TEXT_PARSE_ERROR`
+- In strict-mode JSON output, workflow summary now includes `layer_rules_preflight` with `source_*`, `resolved_path`, `parse_summary`, and `parse_events`.
+
+### 4.5 Strict and relaxed execution
+
+`strict-layer` is disabled by default (report-only). Use strict mode when you want hard failure on missing/violated rules:
+
+Strict mode (hard fail):
+
+```bash
+bash .specify/scripts/bash/run-feature-workflow-sequence.sh --feature-dir "<abs-feature-path>" --strict-layer --strict-naming --json
+```
+In strict mode, workflow fails when parser metadata indicates malformed/ambiguous YAML/JSON input (`parse_summary.failed > 0`) or unavailable parser dependency (`parse_summary.blocked_by_parser_missing > 0`).
+
+Relaxed mode (warn/report only):
+
+```bash
+bash .specify/scripts/bash/run-feature-workflow-sequence.sh --feature-dir "<abs-feature-path>" --no-strict-layer --json
+```
+
+Include `--setup-code` when you want template regeneration in the same pass:
+
+```bash
+bash .specify/scripts/bash/run-feature-workflow-sequence.sh --feature-dir "<abs-feature-path>" --json --setup-code
+```
 
 ---
 
-## 9. Uninstall
+## 5) Script map used by layer governance
 
-If needed:
+- `.specify/scripts/bash/load-layer-rules.sh`: resolve architecture/constitution -> merged policy -> contract
+- `.specify/scripts/bash/bootstrap-layer-rules.sh`: initialize project-level rule baseline
+- `.specify/scripts/bash/check-layer-compliance.sh`: validate generated code against rules
+- `.specify/scripts/bash/run-feature-workflow-sequence.sh`: include policy validation in daily checks
+
+---
+
+## 6) Remove guide
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
 bash /tmp/specgate-install.sh --uninstall --prefix .
 ```
 
-To remove one agent only:
+Check full removal:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
-bash /tmp/specgate-install.sh --uninstall --preset claude --prefix .
+[ ! -d .specify ] \
+  && [ ! -d .claude/commands/specgate ] \
+  && ( [ ! -f .claude/hooks/statusline.js ] || ! (grep -qF "# @specgate-managed:statusline" .claude/hooks/statusline.js || grep -qF "Claude Code Statusline - SpecGate Edition" .claude/hooks/statusline.js) ) \
+  && [ ! -d .codex/skills/specgate ] \
+  && [ ! -d .opencode/command ] \
+  && [ ! -f docs/SPECGATE.md ] \
+  && echo "SpecGate assets removed."
 ```
 
-`statusline.js` is only removed when it is identified as a SpecGate-owned file to avoid deleting custom statusline scripts from other tools.
-`--update` also only updates `statusline.js` when it is a SpecGate-owned file.
+`statusline.js` is only removed when owned by SpecGate.
+`--update` similarly updates it only when owned markers exist.
+
+---
+
+## 7) Installation troubleshooting
+
+- If command output indicates incomplete install, run install with `--clean`.
+- If statusline is unexpectedly changed by another tool, keep it and inspect marker checks.
+- For Codex + home scope, uninstall separately with `--preset codex-home`.
+
+When you need command reference details and examples for other platforms, refer to `README.md` and `README-ko.md`.

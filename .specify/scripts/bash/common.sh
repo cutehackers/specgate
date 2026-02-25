@@ -355,6 +355,98 @@ PY
     fi
 }
 
+resolve_layer_rules_source() {
+    local feature_dir="$1"
+    local repo_root="$2"
+    local python_output
+    local resolved_output
+    local layer_rules_loader
+    local -a load_layer_args
+
+    layer_rules_loader="${SCRIPT_DIR:-$(CDPATH="" cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}/load-layer-rules.sh"
+
+    LAYER_RULES_SOURCE_KIND="DEFAULT"
+    LAYER_RULES_SOURCE_FILE=""
+    LAYER_RULES_SOURCE_REASON="No resolved layer_rules source found. Using defaults."
+    LAYER_RULES_POLICY_JSON="{}"
+    LAYER_RULES_RESOLVED_PATH=""
+    LAYER_RULES_HAS_LAYER_RULES="false"
+    LAYER_RULES_PARSE_EVENTS="[]"
+    LAYER_RULES_PARSE_SUMMARY="{}"
+
+    if [[ ! -f "$layer_rules_loader" ]]; then
+        LAYER_RULES_SOURCE_REASON="Layer rules loader script is not available; skipping layer policy resolution."
+        return 0
+    fi
+
+    if ! command -v python3 >/dev/null 2>&1; then
+        LAYER_RULES_SOURCE_REASON="python3 is required for machine-readable layer rules; fallback only."
+        return 0
+    fi
+
+    load_layer_args=(
+        --feature-dir "$feature_dir"
+        --repo-root "$repo_root"
+        --json
+        --no-write-resolved
+    )
+    if ! python_output="$(bash "$layer_rules_loader" "${load_layer_args[@]}")"; then
+        LAYER_RULES_SOURCE_REASON="load-layer-rules.sh failed to resolve layer rules."
+        return 1
+    fi
+    if [[ -z "$python_output" ]]; then
+        return 1
+    fi
+
+    resolved_output="$(python_output="$python_output" python3 - "$python_output" <<'PY'
+import json
+import os
+
+raw = os.environ.get("python_output", "")
+try:
+    payload = json.loads(raw)
+except Exception:
+    payload = {}
+
+if not isinstance(payload, dict):
+    payload = {}
+print("LAYER_RULES_SOURCE_KIND=" + payload.get("source_kind", "DEFAULT"))
+print("LAYER_RULES_SOURCE_FILE=" + payload.get("source_file", ""))
+print("LAYER_RULES_SOURCE_REASON=" + payload.get("source_reason", ""))
+print("LAYER_RULES_RESOLVED_PATH=" + payload.get("resolved_path", ""))
+print("LAYER_RULES_HAS_LAYER_RULES=" + ("true" if bool(payload.get("has_layer_rules", False)) else "false"))
+print(f"LAYER_RULES_PARSE_EVENTS={json.dumps(payload.get('parse_events', []), ensure_ascii=False, separators=(',', ':'))}")
+print(f"LAYER_RULES_PARSE_SUMMARY={json.dumps(payload.get('parse_summary', {}), ensure_ascii=False, separators=(',', ':'))}")
+
+policy = payload.get("policy", {})
+if not isinstance(policy, dict):
+    policy = {}
+print(f"LAYER_RULES_POLICY_JSON={json.dumps(policy, ensure_ascii=False, separators=(',', ':'))}")
+PY
+)"
+    if [[ -z "$resolved_output" ]]; then
+        return 1
+    fi
+
+    while IFS= read -r pair; do
+        case "$pair" in
+            LAYER_RULES_SOURCE_KIND=*) LAYER_RULES_SOURCE_KIND="${pair#LAYER_RULES_SOURCE_KIND=}" ;;
+            LAYER_RULES_SOURCE_FILE=*) LAYER_RULES_SOURCE_FILE="${pair#LAYER_RULES_SOURCE_FILE=}" ;;
+            LAYER_RULES_SOURCE_REASON=*) LAYER_RULES_SOURCE_REASON="${pair#LAYER_RULES_SOURCE_REASON=}" ;;
+            LAYER_RULES_RESOLVED_PATH=*) LAYER_RULES_RESOLVED_PATH="${pair#LAYER_RULES_RESOLVED_PATH=}" ;;
+            LAYER_RULES_HAS_LAYER_RULES=*) LAYER_RULES_HAS_LAYER_RULES="${pair#LAYER_RULES_HAS_LAYER_RULES=}" ;;
+            LAYER_RULES_POLICY_JSON=*) LAYER_RULES_POLICY_JSON="${pair#LAYER_RULES_POLICY_JSON=}" ;;
+            LAYER_RULES_PARSE_EVENTS=*) LAYER_RULES_PARSE_EVENTS="${pair#LAYER_RULES_PARSE_EVENTS=}" ;;
+            LAYER_RULES_PARSE_SUMMARY=*) LAYER_RULES_PARSE_SUMMARY="${pair#LAYER_RULES_PARSE_SUMMARY=}" ;;
+        esac
+    done <<< "$resolved_output"
+
+    if [[ -z "$LAYER_RULES_SOURCE_KIND" ]]; then
+        LAYER_RULES_SOURCE_KIND="DEFAULT"
+        LAYER_RULES_SOURCE_REASON="Resolved layer metadata could not be parsed from loader output; using defaults."
+    fi
+}
+
 get_feature_paths() {
     local feature_dir
     feature_dir=$(require_feature_dir "$1") || true
@@ -364,8 +456,15 @@ get_feature_paths() {
         return 1
     fi
 
-    local repo_root
-    repo_root=$(get_repo_root)
+    local repo_root=""
+
+    local feature_repo_root
+    feature_repo_root="$(cd "$feature_dir" && git rev-parse --show-toplevel 2>/dev/null || true)"
+    if [[ -n "$feature_repo_root" ]]; then
+        repo_root="$feature_repo_root"
+    else
+        repo_root="$(get_repo_root)"
+    fi
 
     if [[ "$feature_dir" != /* ]]; then
         echo "ERROR: --feature-dir must be an absolute path. Got: $feature_dir" >&2
@@ -382,6 +481,7 @@ get_feature_paths() {
     local feature_docs_dir="$feature_dir/docs"
 
     resolve_naming_source "$feature_dir" "$repo_root"
+    resolve_layer_rules_source "$feature_dir" "$repo_root"
 
     printf 'REPO_ROOT=%q\n' "$repo_root"
     printf 'HAS_GIT=%q\n' "$has_git_repo"
@@ -398,6 +498,14 @@ get_feature_paths() {
     printf 'NAMING_SOURCE_FILE=%q\n' "$NAMING_SOURCE_FILE"
     printf 'NAMING_SOURCE_REASON=%q\n' "$NAMING_SOURCE_REASON"
     printf 'NAMING_POLICY_JSON=%q\n' "$NAMING_POLICY_JSON"
+    printf 'LAYER_RULES_SOURCE_KIND=%q\n' "$LAYER_RULES_SOURCE_KIND"
+    printf 'LAYER_RULES_SOURCE_FILE=%q\n' "$LAYER_RULES_SOURCE_FILE"
+    printf 'LAYER_RULES_SOURCE_REASON=%q\n' "$LAYER_RULES_SOURCE_REASON"
+    printf 'LAYER_RULES_RESOLVED_PATH=%q\n' "$LAYER_RULES_RESOLVED_PATH"
+    printf 'LAYER_RULES_HAS_LAYER_RULES=%q\n' "$LAYER_RULES_HAS_LAYER_RULES"
+    printf 'LAYER_RULES_POLICY_JSON=%q\n' "$LAYER_RULES_POLICY_JSON"
+    printf 'LAYER_RULES_PARSE_EVENTS=%q\n' "$LAYER_RULES_PARSE_EVENTS"
+    printf 'LAYER_RULES_PARSE_SUMMARY=%q\n' "$LAYER_RULES_PARSE_SUMMARY"
 }
 
 check_file() { [[ -f "$1" ]] && echo "  ✓ $2" || echo "  ✗ $2"; }

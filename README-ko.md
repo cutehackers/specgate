@@ -359,7 +359,146 @@ strict naming은 기본값입니다. 레거시 산출물 상태에서 임시로 
 bash .specify/scripts/bash/run-feature-workflow-sequence.sh --feature-dir <abs-feature-path> --json --no-strict-naming
 ```
 
-코드 템플릿 재생성이 필요하면 운영 점검 시 다음을 포함할 수 있습니다.
+## 6.1) 소비자 프로젝트 레벨 layer 정책 운영 (strict-layer 토글)
+
+소비자 프로젝트에서 layer 규칙은 소비자 저장소 내부 `.specify/layer_rules`에서 해석됩니다.
+
+- `.specify/layer_rules/contract.yaml`
+- `.specify/layer_rules/overrides/<feature-id>.yaml` (필요 시)
+
+첫 strict 실행 전 정책 파일을 초기화/동기화하세요.
+
+```bash
+bash .specify/scripts/bash/bootstrap-layer-rules.sh --repo-root . --feature-dir "<abs-feature-path>" --json
+```
+
+게이트 실행 전에 적용 정책을 먼저 확인하세요.
+
+```bash
+bash .specify/scripts/bash/load-layer-rules.sh --source-dir "<abs-feature-path>" --repo-root . --json
+```
+
+`load-layer-rules.sh`는 YAML 블록 파싱을 위해 `PyYAML`(권장) 또는 `ruamel.yaml`이 Python 환경에 설치되어 있어야 하며, 둘 다 없으면 정책 파싱이 비신뢰 상태로 표시됩니다.
+
+### `load-layer-rules.sh` 사용법
+
+이 명령은 아래 소스의 layer 정책을 병합해 해석합니다.
+
+- `.specify/layer_rules/contract.yaml` (전역)
+- `.specify/layer_rules/overrides/<feature-id>.yaml` (feature override)
+- `<feature>/docs/ARCHITECTURE.md`
+- `<feature>/docs/architecture.md`
+- `<feature>/docs/constitution.md`
+- `<feature>/constitution.md`
+
+`--source-dir`는 임의 경로를 재귀 탐색하지 않고, 입력 폴더 하위에서 아래 고정 파일만 확인합니다.
+
+- `<source-dir>/docs/ARCHITECTURE.md`
+- `<source-dir>/docs/architecture.md`
+- `<source-dir>/docs/constitution.md`
+- `<source-dir>/constitution.md`
+
+`--source-dir`는 `architecture.md`/`constitution.md`를 읽을 정책 소스 경로이고, `--feature-id`는 오버라이드/캐시 파일명(`.specify/layer_rules/overrides/<feature-id>.yaml`, `.specify/layer_rules/resolved/<feature-id>.json`)에만 사용됩니다.
+
+```bash
+# 병합 정책 확인
+bash .specify/scripts/bash/load-layer-rules.sh \
+  --source-dir "<abs-feature-path>" \
+  --repo-root . \
+  --json
+
+# 정책을 contract.yaml로 동기화
+bash .specify/scripts/bash/load-layer-rules.sh \
+  --source-dir "<abs-feature-path>" \
+  --repo-root . \
+  --write-contract \
+  --json
+
+# 기존 contract.yaml 강제 덮어쓰기
+bash .specify/scripts/bash/load-layer-rules.sh \
+  --source-dir "<abs-feature-path>" \
+  --repo-root . \
+  --write-contract \
+  --force-contract \
+  --json
+```
+
+필요한 경우 문서 기반 정책을 `contract.yaml`로 동기화하세요.
+
+```bash
+bash .specify/scripts/bash/load-layer-rules.sh \
+  --source-dir "<abs-feature-path>" \
+  --repo-root . \
+  --write-contract \
+  --json
+```
+
+직접 경로를 넣은 샘플:
+
+```bash
+bash .specify/scripts/bash/load-layer-rules.sh \
+  --source-dir "/Users/me/workspace/app/lib/src/features/home" \
+  --repo-root "/Users/me/workspace/app" \
+  --write-contract \
+  --force-contract \
+  --json
+```
+
+기존 문법(`--feature-dir`)도 호환되어 그대로 사용할 수 있습니다.
+
+```bash
+bash .specify/scripts/bash/load-layer-rules.sh --feature-dir "<abs-feature-path>" --repo-root . --json
+```
+
+`contract.yaml`이 이미 존재하면 교체하려면 `--force-contract`를 추가하세요.
+
+`load-layer-rules.sh`는 정책 조회/동기화 모두를 한 번에 처리하는 기본 경로입니다.
+핵심 포인트:
+
+- 병합 우선순위(contract/override/architecture/constitution) 확인 및 적용
+- `--write-contract`로 병합 결과를 `contract.yaml` 동기화
+- `--force-contract`로 기존 `contract.yaml` 갱신
+- `contract_path` / `contract_written`로 실제 동기화 결과 확인
+
+상세 사용법, 샘플 명령(architecture/feature 예시), 결과 필드 해석은
+`docs/SPECGATE.md`의 `Layer governance` 섹션을 확인하세요.
+
+- `source_kind` / `source_file` / `source_reason`: 최종 정책이 어디서 왔는지 확인
+- `resolved_path`: 병합된 정책 JSON 경로
+- `has_layer_rules`: strict 운영에서 `true`여야 함
+- `applied_sources`: 계약/오버라이드/문서 기반 병합 이력
+- `contract_path` / `contract_written`: `--write-contract`로 실제 저장된 경로/성공 여부
+- `parse_events`: YAML/JSON 후보 파싱 시도/성공/실패의 머신 판독 이벤트
+- `parse_summary`: 실패·성공·스키마 미스매치 카운트 집계
+- `parse_summary`에서 `failed` 또는 `blocked_by_parser_missing` 값이 0보다 크면 strict 모드에서 하드 실패 게이트로 처리됩니다.
+
+`source_kind` 예시:
+
+- `CONTRACT`: 전역 contract.yaml 로드
+- `OVERRIDE`: feature override 로드
+- `CONSTITUTION` / `ARCHITECTURE`: feature 문서에서 추출
+- `CONTRACT_GENERATED`: `--write-contract`로 병합 contract.yaml 생성
+- `DEFAULT`: 사용 가능한 소스가 없어 기본값(권장: strict 모드에서 실패)
+
+`strict-layer`는 기본적으로 비활성입니다(경고/리포트). 하드 실패가 필요하면 strict 모드로 실행하세요.
+
+운영 모드(strict, 실패 강제 종료):
+
+```bash
+bash .specify/scripts/bash/run-feature-workflow-sequence.sh --feature-dir "<abs-feature-path>" --strict-layer --strict-naming --json
+```
+
+완화 모드(strict-layer 비활성, 위반은 경고/리포트만):
+
+```bash
+bash .specify/scripts/bash/run-feature-workflow-sequence.sh --feature-dir "<abs-feature-path>" --no-strict-layer --json
+```
+
+- `--strict-layer`: layer 규칙 미존재/위반 및 파서 실패가 하드 실패로 처리됩니다.
+  - `parse_summary.failed > 0`, `parse_summary.blocked_by_parser_missing > 0` 조건이 해당됩니다.
+- `--no-strict-layer`: layer 위반은 감지되더라도 시퀀스 자체는 통과합니다. 마이그레이션/레거시 정리 기간에만 임시 사용하세요.
+
+코드 템플릿 재생성까지 같이 돌리려면 아래를 추가합니다.
 
 ```bash
 bash .specify/scripts/bash/run-feature-workflow-sequence.sh --feature-dir <abs-feature-path> --json --setup-code

@@ -4,9 +4,12 @@ set -euo pipefail
 
 JSON_MODE=false
 ALLOW_TOOL_FALLBACK=false
+STRICT_LAYER=false
 FEATURE_DIR_ARG=""
 FULL_TEST_SUITE=false
 DEGRADED=false
+LAYER_CHECK_OK=true
+LAYER_COMPLIANCE_JSON="{}"
 
 declare -a EXPLICIT_TEST_TARGETS=()
 declare -a DEGRADED_CHECKS=()
@@ -20,6 +23,7 @@ Options:
   --test-target <path>       Additional impacted test target (repeatable)
   --full-test-suite          Force full flutter test run instead of scoped targets
   --allow-tool-fallback      Continue when flutter/dart tooling fails due local environment restrictions
+  --strict-layer             Enforce layer policy violations as hard failures
   --json                     Print JSON output on success
   --help                     Show this message
 USAGE
@@ -41,6 +45,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --allow-tool-fallback)
             ALLOW_TOOL_FALLBACK=true
+            shift
+            ;;
+        --strict-layer)
+            STRICT_LAYER=true
             shift
             ;;
         --json)
@@ -101,6 +109,57 @@ run_tool() {
     return "$rc"
 }
 
+run_layer_compliance() {
+    local layer_tmp
+    local layer_rc
+
+    if [[ ! -x "$SCRIPT_DIR/check-layer-compliance.sh" ]]; then
+        if $STRICT_LAYER; then
+            LAYER_COMPLIANCE_JSON='{"ok":false,"strict":true,"policy_present":false,"warnings":["Layer compliance engine missing: .specify/scripts/bash/check-layer-compliance.sh"],"summary":{},"layer_rules_source":{"kind":"DEFAULT","file":"","reason":"check-layer-compliance.sh unavailable"}}'
+            LAYER_CHECK_OK=false
+        else
+            LAYER_COMPLIANCE_JSON="{}"
+            LAYER_CHECK_OK=true
+        fi
+        return 0
+    fi
+
+    layer_tmp="$(mktemp)"
+    set +e
+    if $STRICT_LAYER; then
+        "$SCRIPT_DIR/check-layer-compliance.sh" --feature-dir "$FEATURE_DIR" --strict-layer --json > "$layer_tmp"
+    else
+        "$SCRIPT_DIR/check-layer-compliance.sh" --feature-dir "$FEATURE_DIR" --json > "$layer_tmp"
+    fi
+    layer_rc=$?
+    set -e
+
+    if [[ -s "$layer_tmp" ]]; then
+        LAYER_COMPLIANCE_JSON="$(cat "$layer_tmp")"
+    fi
+    rm -f "$layer_tmp"
+
+    if [[ "$LAYER_COMPLIANCE_JSON" == "{}" ]]; then
+        LAYER_CHECK_OK=true
+        return 0
+    fi
+
+    LAYER_CHECK_OK="$(python3 - "$LAYER_COMPLIANCE_JSON" <<'PY'
+import json
+import sys
+
+raw = sys.argv[1] if len(sys.argv) > 1 else "{}"
+try:
+    payload = json.loads(raw)
+    print("true" if bool(payload.get("ok", True)) else "false")
+except Exception:
+    print("true")
+PY
+    )"
+
+    return "$layer_rc"
+}
+
 SCRIPT_DIR="$(CDPATH="" cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
 
@@ -109,6 +168,18 @@ eval $(get_feature_paths "$FEATURE_DIR_ARG") || exit 1
 if [[ ! -f "$CODE_DOC" ]]; then
     echo "ERROR: tasks.md not found: $CODE_DOC" >&2
     exit 1
+fi
+
+run_layer_compliance
+layer_check_rc=$?
+LAYER_STRICT_FAILED=false
+if [[ "$LAYER_CHECK_OK" != true ]]; then
+    if $STRICT_LAYER; then
+        LAYER_STRICT_FAILED=true
+    fi
+    if ! $JSON_MODE; then
+        echo "ERROR: Layer compliance failed. Review check-layer-compliance findings." >&2
+    fi
 fi
 
 FEATURE_NAME="$(basename "$FEATURE_DIR")"
@@ -370,14 +441,17 @@ if $JSON_MODE; then
     else
         RESOLVED_TEST_TARGETS_PAYLOAD=""
     fi
-    python3 - \
+python3 - \
         "$FEATURE_DIR" \
         "$FEATURE_REL" \
         "$TEST_MODE" \
         "$UNIQUE_FORMAT_FILES_PAYLOAD" \
         "$RESOLVED_TEST_TARGETS_PAYLOAD" \
         "$DEGRADED" \
-        "$DEGRADED_CHECKS_PAYLOAD" <<'PY'
+        "$DEGRADED_CHECKS_PAYLOAD" \
+        "$STRICT_LAYER" \
+        "$LAYER_COMPLIANCE_JSON" \
+        "$LAYER_STRICT_FAILED" <<'PY'
 import json
 import sys
 
@@ -388,9 +462,19 @@ format_targets = [x for x in sys.argv[4].split() if x]
 test_targets = [x for x in sys.argv[5].split() if x]
 degraded = sys.argv[6].lower() == "true"
 degraded_checks = [x for x in sys.argv[7].splitlines() if x.strip()]
+strict_layer = sys.argv[8].lower() == "true"
+layer_compliance_json = sys.argv[9] if len(sys.argv) > 9 else "{}"
+layer_strict_failed = sys.argv[10].lower() == "true" if len(sys.argv) > 10 else False
+
+try:
+    layer_compliance = json.loads(layer_compliance_json) if layer_compliance_json else {}
+except Exception:
+    layer_compliance = {}
+
+ok = not layer_strict_failed
 
 print(json.dumps({
-    "ok": True,
+    "ok": ok,
     "feature_dir": feature_dir,
     "analyze_target": feature_rel,
     "test_mode": test_mode,
@@ -398,9 +482,35 @@ print(json.dumps({
     "test_targets": test_targets,
     "degraded": degraded,
     "degraded_checks": degraded_checks,
+    "strict_layer": strict_layer,
+    "layer_compliance": layer_compliance,
+    "layer_strict_failed": layer_strict_failed,
 }, ensure_ascii=False))
 PY
 else
+    if $LAYER_STRICT_FAILED; then
+        echo "RESULT: implementation quality failed due strict layer policy."
+        python3 - "$LAYER_COMPLIANCE_JSON" <<'PY'
+import json
+import sys
+
+raw = sys.argv[1] if len(sys.argv) > 1 else "{}"
+try:
+    payload = json.loads(raw) if raw else {}
+except Exception:
+    payload = {}
+
+for finding in payload.get("findings", []):
+    file_path = finding.get("file", "<unknown>")
+    line = finding.get("line", "?")
+    message = finding.get("message", "")
+    severity = finding.get("severity", "warning")
+    print(f"{severity.upper()} {file_path}:{line} {message}")
+for warning in payload.get("warnings", []):
+    print(f"WARNING {warning}")
+PY
+        exit 1
+    fi
     echo "OK: implementation quality gate passed"
     if $DEGRADED; then
         echo "WARN: quality gate executed in fallback mode."

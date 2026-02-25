@@ -4,6 +4,7 @@ set -e
 
 FEATURE_DIR_ARG=""
 JSON_MODE=false
+STRICT_LAYER=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -13,6 +14,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --json)
             JSON_MODE=true
+            shift
+            ;;
+        --strict-layer)
+            STRICT_LAYER=true
             shift
             ;;
         *)
@@ -29,8 +34,8 @@ eval $(get_feature_paths "$FEATURE_DIR_ARG") || exit 1
 
 if [[ ! -f "$CODE_DOC" ]]; then
     if $JSON_MODE; then
-        printf '{"ok":false,"code_doc":"%s","naming_source":{"kind":"%s","file":"%s","reason":"%s"},"artifact_errors":["Missing required artifact: tasks.md"],"contracts_detected":false,"parallel_strategy_issues":[],"forbidden_terms":[],"forbidden_name_terms":[],"priority_issues":[],"priority_counts":{"P1":0,"P2":0,"P3":0},"blocking_priority_counts":{"P1":0,"P2":0,"P3":0},"execution_context":{},"execution_context_issues":[],"violation_sections":{},"name_violation_sections":{},"naming_policy_violations":[],"naming_policy":{}}\n' \
-            "$CODE_DOC" "$NAMING_SOURCE_KIND" "$NAMING_SOURCE_FILE" "$NAMING_SOURCE_REASON"
+        printf '{"ok":false,"code_doc":"%s","naming_source":{"kind":"%s","file":"%s","reason":"%s"},"layer_rules_source":{"kind":"%s","file":"%s","reason":"%s"},"strict_layer":%s,"artifact_errors":["Missing required artifact: tasks.md"],"contracts_detected":false,"parallel_strategy_issues":[],"forbidden_terms":[],"forbidden_name_terms":[],"priority_issues":[],"priority_counts":{"P1":0,"P2":0,"P3":0},"blocking_priority_counts":{"P1":0,"P2":0,"P3":0},"execution_context":{},"execution_context_issues":[],"violation_sections":{},"name_violation_sections":{},"naming_policy_violations":[],"layer_compliance":{},"naming_policy":{}}\n' \
+            "$CODE_DOC" "$NAMING_SOURCE_KIND" "$NAMING_SOURCE_FILE" "$NAMING_SOURCE_REASON" "$LAYER_RULES_SOURCE_KIND" "$LAYER_RULES_SOURCE_FILE" "$LAYER_RULES_SOURCE_REASON" "$STRICT_LAYER"
     else
         echo "ERROR: tasks.md not found: $CODE_DOC" >&2
     fi
@@ -39,15 +44,42 @@ fi
 
 if [[ ! -f "$DATA_MODEL" ]]; then
     if $JSON_MODE; then
-        printf '{"ok":false,"code_doc":"%s","naming_source":{"kind":"%s","file":"%s","reason":"%s"},"artifact_errors":["Missing required artifact: data-model.md"],"contracts_detected":false,"parallel_strategy_issues":[],"forbidden_terms":[],"forbidden_name_terms":[],"priority_issues":[],"priority_counts":{"P1":0,"P2":0,"P3":0},"blocking_priority_counts":{"P1":0,"P2":0,"P3":0},"execution_context":{},"execution_context_issues":[],"violation_sections":{},"name_violation_sections":{},"naming_policy_violations":[],"naming_policy":{}}\n' \
-            "$CODE_DOC" "$NAMING_SOURCE_KIND" "$NAMING_SOURCE_FILE" "$NAMING_SOURCE_REASON"
+        printf '{"ok":false,"code_doc":"%s","naming_source":{"kind":"%s","file":"%s","reason":"%s"},"layer_rules_source":{"kind":"%s","file":"%s","reason":"%s"},"strict_layer":%s,"artifact_errors":["Missing required artifact: data-model.md"],"contracts_detected":false,"parallel_strategy_issues":[],"forbidden_terms":[],"forbidden_name_terms":[],"priority_issues":[],"priority_counts":{"P1":0,"P2":0,"P3":0},"blocking_priority_counts":{"P1":0,"P2":0,"P3":0},"execution_context":{},"execution_context_issues":[],"violation_sections":{},"name_violation_sections":{},"naming_policy_violations":[],"layer_compliance":{},"naming_policy":{}}\n' \
+            "$CODE_DOC" "$NAMING_SOURCE_KIND" "$NAMING_SOURCE_FILE" "$NAMING_SOURCE_REASON" "$LAYER_RULES_SOURCE_KIND" "$LAYER_RULES_SOURCE_FILE" "$LAYER_RULES_SOURCE_REASON" "$STRICT_LAYER"
     else
         echo "ERROR: data-model.md not found: $DATA_MODEL" >&2
     fi
     exit 1
 fi
 
-python3 - <<'PY' "$CODE_DOC" "$JSON_MODE" "$SCREEN_ABSTRACTION" "$QUICKSTART" "$DATA_MODEL" "$CONTRACTS_DIR" "$NAMING_SOURCE_KIND" "$NAMING_SOURCE_FILE" "$NAMING_SOURCE_REASON" "$NAMING_POLICY_JSON"
+LAYER_COMPLIANCE_JSON="{}"
+if [[ -x "$SCRIPT_DIR/check-layer-compliance.sh" ]]; then
+    layer_tmp="$(mktemp)"
+    layer_rc=0
+    set +e
+    if $STRICT_LAYER; then
+        "$SCRIPT_DIR/check-layer-compliance.sh" --feature-dir "$FEATURE_DIR" --strict-layer --json > "$layer_tmp"
+    else
+        "$SCRIPT_DIR/check-layer-compliance.sh" --feature-dir "$FEATURE_DIR" --json > "$layer_tmp"
+    fi
+    layer_rc=$?
+    set -e
+
+    if [[ -s "$layer_tmp" ]]; then
+        LAYER_COMPLIANCE_JSON="$(cat "$layer_tmp")"
+    fi
+    rm -f "$layer_tmp"
+
+    if [[ $layer_rc -ne 0 ]] && [[ "$STRICT_LAYER" == false ]]; then
+        layer_rc=0
+    fi
+else
+    if $STRICT_LAYER; then
+        LAYER_COMPLIANCE_JSON='{"ok":false,"strict":true,"policy_present":false,"advice":["Create .specify/layer_rules/contract.yaml or run .specify/scripts/bash/load-layer-rules.sh --write-contract --feature-dir <abs feature path> --repo-root <repo root> --json"],"warnings":["Layer policy engine unavailable in this repository."],"layer_rules_source":{"kind":"DEFAULT","file":"","reason":"check-layer-compliance.sh unavailable"}}'
+    fi
+fi
+
+python3 - <<'PY' "$CODE_DOC" "$JSON_MODE" "$SCREEN_ABSTRACTION" "$QUICKSTART" "$DATA_MODEL" "$CONTRACTS_DIR" "$NAMING_SOURCE_KIND" "$NAMING_SOURCE_FILE" "$NAMING_SOURCE_REASON" "$NAMING_POLICY_JSON" "$LAYER_RULES_SOURCE_KIND" "$LAYER_RULES_SOURCE_FILE" "$LAYER_RULES_SOURCE_REASON" "$STRICT_LAYER" "$LAYER_RULES_POLICY_JSON" "$LAYER_COMPLIANCE_JSON"
 import json
 import re
 import sys
@@ -68,6 +100,41 @@ try:
     json_naming_rules = json.loads(sys.argv[10]) if len(sys.argv) > 10 and sys.argv[10] else {}
 except Exception:
     json_naming_rules = {}
+try:
+    layer_rules_policy = json.loads(sys.argv[15]) if len(sys.argv) > 15 and sys.argv[15] else {}
+except Exception:
+    layer_rules_policy = {}
+
+json_layer_rules_source = {
+    "kind": sys.argv[11] if len(sys.argv) > 11 else "DEFAULT",
+    "file": sys.argv[12] if len(sys.argv) > 12 else "",
+    "reason": sys.argv[13] if len(sys.argv) > 13 else "No layer rules metadata provided.",
+}
+strict_layer = sys.argv[14].lower() == "true" if len(sys.argv) > 14 else False
+layer_compliance_raw = sys.argv[16] if len(sys.argv) > 16 else "{}"
+
+artifact_checks = []
+
+try:
+    layer_compliance = json.loads(layer_compliance_raw) if layer_compliance_raw else {}
+except Exception:
+    layer_compliance = {}
+layer_compliance_ok = bool(layer_compliance.get("ok", True)) if isinstance(layer_compliance, dict) else True
+
+if strict_layer and not layer_compliance_ok:
+    artifact_checks.append("Strict layer policy enabled, but layer compliance check failed.")
+    if isinstance(layer_compliance, dict):
+        if layer_compliance.get("advice"):
+            artifact_checks.append(
+                "Layer compliance advice: "
+                + ", ".join(str(v) for v in layer_compliance.get("advice") if v)
+            )
+
+json_layer_rules_present = False
+if isinstance(layer_rules_policy, dict):
+    json_layer_rules = layer_rules_policy.get("layer_rules")
+    json_layer_rules_present = bool(isinstance(json_layer_rules, dict) and json_layer_rules)
+
 text = code_doc_path.read_text(encoding="utf-8").replace("\r\n", "\n")
 
 
@@ -512,6 +579,12 @@ if parsed_data_model is None or not data_model_text:
 else:
     sections_to_scan["DATA_MODEL_DOC"] = data_model_text
 
+if strict_layer and not json_layer_rules_present:
+    artifact_checks.append(
+        "Strict layer policy is enabled, but no layer rules were resolved."
+        "Run .specify/scripts/bash/load-layer-rules.sh --source-dir <abs feature path> --repo-root <repo root> --write-contract --json."
+    )
+
 
 naming_policy_violations = []
 def architecture_compliance_issue(section_content: str, row_label: str, expected_suffix):
@@ -810,8 +883,12 @@ result = {
     "ok": ok,
     "code_doc": str(code_doc_path),
     "naming_source": json_naming_source,
+    "layer_rules_source": json_layer_rules_source,
     "missing_sections": missing_sections,
+    "strict_layer": strict_layer,
     "artifact_errors": artifact_checks,
+    "layer_compliance": layer_compliance,
+    "layer_compliance_ok": layer_compliance_ok,
     "contracts_detected": contracts_detected,
     "parallel_strategy_issues": parallel_strategy_issues,
     "forbidden_terms": forbidden_terms,
@@ -848,6 +925,21 @@ else:
             print("Artifact errors:", file=sys.stderr)
             for issue in artifact_checks:
                 print(f"  - {issue}", file=sys.stderr)
+        if layer_compliance.get("warnings"):
+            print("Layer policy warnings:", file=sys.stderr)
+            for issue in layer_compliance.get("warnings", []):
+                print(f"  - {issue}", file=sys.stderr)
+        if isinstance(layer_compliance, dict):
+            layer_findings = layer_compliance.get("findings", [])
+            if layer_findings:
+                print("Layer rule findings:", file=sys.stderr)
+                for finding in layer_findings:
+                    file_path = finding.get("file", "<unknown>")
+                    line = finding.get("line", "?")
+                    category = finding.get("category", "policy")
+                    message = finding.get("message", "")
+                    severity = finding.get("severity", "warning")
+                    print(f"  - {severity.upper()} [{category}] {file_path}:{line}: {message}", file=sys.stderr)
         if priority_issues:
             print("Priority tag issues:", file=sys.stderr)
             for issue in priority_issues:

@@ -10,6 +10,7 @@
 - **Architecture Baseline**: `docs/ARCHITECTURE.md`
 - **Naming Source**: `<resolved docs/ARCHITECTURE.md or constitution path>`
 - **Naming Policy Rules**: <{{NAMING_RULES}}>
+- **Layer Rules Source**: `<resolved .specify/layer_rules/contract.yaml or .specify/layer_rules/overrides/...>`
 - **Input**: "$ARGUMENTS"
 
 ## Problem Statement & Scope

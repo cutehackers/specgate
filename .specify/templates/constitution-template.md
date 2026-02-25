@@ -30,7 +30,8 @@
 
 ## Naming Conventions
 
-All naming rules MUST be defined in machine-readable JSON in this constitution or an architecture document.
+All naming rules MUST be defined in machine-readable JSON or YAML blocks in this constitution
+or an architecture document.
 
 ```json
 {
@@ -47,6 +48,51 @@ All naming rules MUST be defined in machine-readable JSON in this constitution o
 ```
 
 Feature templates and code-generation workflows MUST reference this section for naming checks and validation.
+
+## Layer Rules
+
+Every implementation-critical project must define `layer_rules` in machine-readable form and
+keep it consistent across repositories:
+
+- `.specify/layer_rules/contract.yaml` (global baseline)
+- `.specify/layer_rules/overrides/<feature-id>.yaml` (feature-specific override)
+
+Feature overrides may narrow import restrictions or extend errors/behavior.
+
+```yaml
+kind: "layer_rules"
+naming:
+  entity: "{Name}Entity"
+  dto: "{Name}Dto"
+  use_case: "{Action}UseCase"
+  repository: "{Feature}Repository"
+  repository_impl: "{Feature}RepositoryImpl"
+  event: "{Feature}{Action}Event"
+  controller: "{Feature}Controller"
+  data_source: "{Feature}{Type}DataSource"
+  provider: "{featureName}{Type}Provider"
+
+layer_rules:
+  domain:
+    forbid_import_patterns:
+      - "^package:.*\\/data\\/"
+      - "^package:.*\\/presentation\\/"
+  data:
+    forbid_import_patterns:
+      - "^package:.*\\/presentation\\/"
+
+errors:
+  policy:
+    domain_layer:
+      forbid_exceptions:
+        - StateError
+        - Exception
+      require_result_type: true
+
+behavior:
+  use_case:
+    allow_direct_repository_implementation_use: false
+```
 
 ## [SECTION_2_NAME]
 <!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->

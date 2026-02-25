@@ -9,7 +9,15 @@
 - **Spec Source**: `<feature_dir>/docs/spec.md`
 - **Architecture Baseline**: `docs/ARCHITECTURE.md`
 - **Naming Source**: `<resolved docs/ARCHITECTURE.md or constitution path>`
+- **Layer Rules Source**: {{LAYER_RULES_SOURCE}}
 - **Naming Policy Rules**: <{{NAMING_RULES}}>
+- **Layer Rules Source Kind**: {{LAYER_RULES_SOURCE_KIND}}
+- **Layer Rules Source File**: {{LAYER_RULES_SOURCE_FILE}}
+- **Layer Rules Source Reason**: {{LAYER_RULES_SOURCE_REASON}}
+- **Layer Rules Resolved Path**: {{LAYER_RULES_RESOLVED_PATH}}
+- **Layer Rules Present**: {{LAYER_RULES_HAS_LAYER_RULES}}
+- **Layer Rules Summary**:
+{{LAYER_RULES_SUMMARY}}
 
 > Use `NAMING_SOURCE_FILE` from a machine-readable `json` code block in
 > `docs/ARCHITECTURE.md`/`docs/architecture.md` or constitution.
@@ -34,6 +42,7 @@
 | Domain framework-agnostic | [PASS/OPEN] | [note] |
 | Riverpod state boundary clarity | [PASS/OPEN] | [note] |
 | Presentation abstraction-only policy | [PASS/OPEN] | [note] |
+| `layer_rules` policy source present and valid | [PASS/OPEN] | [note] |
 | Entity naming rule from resolved naming source (`{{ENTITY_SUFFIX}}`) | [PASS/OPEN] | [note] |
 | DTO naming rule from resolved naming source (`{{DTO_SUFFIX}}`) | [PASS/OPEN] | [note] |
 | Use Case naming rule from resolved naming source (`{{USE_CASE_SUFFIX}}`) | [PASS/OPEN] | [note] |

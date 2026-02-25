@@ -68,7 +68,17 @@ Default execution flow: `/specify` -> `/clarify` -> `/codify` -> `/test-specify`
      3. If neither has usable guidance, use existing repository default naming guardrails.
         - In production validation (`run-feature-workflow-sequence` with strict mode), missing or invalid `json` naming policy is treated as a blocking error.
      - Store result as `NAMING_SOURCE_FILE` for use in implementation trace checks.
+   - Resolve layer policy source for coding checks:
+     - `.specify/layer_rules/contract.yaml`
+     - `.specify/layer_rules/overrides/<feature-id>.yaml`
+     - feature `docs/ARCHITECTURE.md`/`docs/architecture.md` (when included in machine-readable `layer_rules` block)
+     - feature `constitution` documents
+     - repository memory constitution
+     - If none exists and strict mode is requested, stop and bootstrap policy files before implementation.
    - Then run `.specify/scripts/bash/setup-code.sh --json --feature-dir "<abs path>"` from repo root and parse JSON for FEATURE_SPEC, CODE_DOC, FEATURE_DIR, FEATURE_DOCS_DIR.
+     - Keep these layer fields available while generating implementation:
+       - `LAYER_RULES_SOURCE_KIND`, `LAYER_RULES_SOURCE_FILE`, `LAYER_RULES_SOURCE_REASON`
+       - `LAYER_RULES_POLICY_JSON`, `LAYER_RULES_RESOLVED_PATH`, `LAYER_RULES_HAS_LAYER_RULES`
    - Resolve required artifact paths from FEATURE_DOCS_DIR:
      - `DATA_MODEL=<FEATURE_DOCS_DIR>/data-model.md`
      - `SCREEN_ABSTRACTION=<FEATURE_DOCS_DIR>/screen_abstraction.md`
@@ -104,29 +114,37 @@ Default execution flow: `/specify` -> `/clarify` -> `/codify` -> `/test-specify`
      - user stories in `spec.md` must be represented by at least one screen contract
    - Confirm `quickstart.md` has executable validation scenarios.
    - Confirm implemented naming identifiers align with resolved naming source:
-     - entity names, events, screen IDs, and repository/task naming follow the selected naming policy
-     - any conflict found should block implementation and route to `/clarify`.
+      - entity names, events, screen IDs, and repository/task naming follow the selected naming policy
+      - any conflict found should block implementation and route to `/clarify`.
+   - Confirm resolved layer policy can drive implementation:
+     - Domain/Data/Presentation file paths must honor `LAYER_RULES_POLICY_JSON` restrictions.
+     - Use-case policy constraints (return-type requirements, forbidden direct repository implementation usage) are enforced.
+     - strict mode requires `LAYER_RULES_HAS_LAYER_RULES=true`; otherwise stop and request policy bootstrap.
 
 4. **Execute implementation from tasks.md**:
    - `/codify` does not generate/overwrite planning artifacts; it must only consume `screen_abstraction.md`, `data-model.md`, `quickstart.md`, and `tasks.md` to implement code and tests.
    - Parse `tasks.md` and implement tasks in dependency order:
      - `P1` tasks first, then `P2`, then `P3`.
      - Respect `[P]` parallel markers and explicit dependency notes.
-   - For each task:
+  - For each task:
      - implement code artifacts in the target repo paths
+     - enforce layer constraints for each target file before editing:
+       - map file path to target layer and validate against the resolved layer policy
+       - reject forbidden imports (`forbid_import_patterns`) and forbidden cross-layer references
      - add/adjust tests for changed behavior
-     - include quickstart-linked validation when task scope applies
-     - update task status to `[x]` only after verification.
+      - include quickstart-linked validation when task scope applies
+      - update task status to `[x]` only after verification.
    - If a task is blocked by unresolved ambiguity, mark it pending and route the blocker to `/clarify` immediately.
 
 5. **Implementation validation**:
    - Validate touched areas against `quickstart.md` scenarios and relevant contract assumptions.
+   - Run `.specify/scripts/bash/check-layer-compliance.sh --feature-dir "<abs path>" --strict-layer --json` and fix blocking violations.
    - Run `.specify/scripts/bash/check-implementation-quality.sh --feature-dir "<abs path>" --json` and stop on failure.
    - Run targeted project tests that cover implemented P1/P2 tasks.
 
 6. **Run code gate**: Execute `.specify/scripts/bash/check-code-prerequisites.sh --feature-dir "<abs path>"` and stop on failure.
 
-7. **Stop and report**: Report feature directory, CODE_DOC path, executed task IDs, test results, naming source (`ARCHITECTURE`/`CONSTITUTION`/`DEFAULT` + path), and confirm pointer is in `coding` stage (`current_doc: tasks.md`).
+7. **Stop and report**: Report feature directory, CODE_DOC path, executed task IDs, test results, naming source (`ARCHITECTURE`/`CONSTITUTION`/`DEFAULT` + path), layer source (`CONTRACT`/`OVERRIDE`/`FEATURE`/`DEFAULT` + path), and confirm pointer is in `coding` stage (`current_doc: tasks.md`).
 
 ## Phases
 

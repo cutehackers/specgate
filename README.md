@@ -1,13 +1,13 @@
 # SpecGate
 
-SpecGate is a lightweight workflow pack for Spec-driven Development (SDD).
-It provides command surfaces and scripts for Claude, OpenCode, and Codex.
+SpecGate is a lightweight workflow package for Spec-Driven Development (SDD).
+It provides commands and scripts for Claude, OpenCode, and Codex.
 
-Install directly into your project without cloning.
+This repository can be installed directly into your project without cloning.
 
 - Default install path: current directory (`.`)
-- Default scope: all agents (`all` by default). Single-agent install is recommended below.
-- Entry points:
+- Default scope: all agents (`all` by default). The guide below uses a single-agent example.
+- Entry commands:
   - `/feature-set`
   - `/specify`
   - `/clarify`
@@ -20,36 +20,36 @@ Install directly into your project without cloning.
   - `/constitution`
   - `/feature-done`
 
-## Standard feature pipeline
+## Standard feature flow
 
 - `/specify -> /clarify -> /codify -> /test-specify -> /test-codify`
-- `/specify` must produce `spec.md`, `research.md`.
-- `/clarify` must produce and maintain all of: `data-model.md`, `screen_abstraction.md`, `quickstart.md`, `tasks.md`.
-- `/codify` must only implement code from the `/clarify` artifacts and `tasks.md`.
-- `/test-specify` then `/test-codify` consume `test-spec.md` artifacts.
-- `specs/feature-stage.local.json` is the local run-time pointer.
-  - It is created in consumer projects by `/feature-set`.
-  - It is intentionally excluded from this package distribution.
+- `/specify` creates and updates `spec.md`, `research.md`.
+- `/clarify` creates and updates at least `data-model.md`, `screen_abstraction.md`, `quickstart.md`, `tasks.md`.
+- `/codify` should only implement code based on `/clarify` outputs and `tasks.md`.
+- `/test-specify` and `/test-codify` create and execute `test-spec.md` separately.
+- `specs/feature-stage.local.json` is the local workflow pointer.
+  - It is created when `/feature-set` runs in a consumer repository.
+  - It is not included in package distribution.
 
 ## 1) Beginner install (recommended)
 
-### Option A) Install one agent (easy start)
+### Option A) Install one agent
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh \
   | bash -s -- --preset [claude|opencode|codex|codex-home] --prefix .
 ```
 
-Pick one:
+Pick one of:
 
-- Claude only:
+- Claude:
 
   ```bash
   curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh \
     | bash -s -- --preset claude --prefix .
   ```
 
-- Opencode only:
+- Opencode:
 
   ```bash
   curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh \
@@ -72,7 +72,7 @@ Pick one:
 
 ### Option B) Install multiple agents together
 
-Use `--ai` with a comma-separated list:
+Pass a comma-separated list with `--ai`.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh \
@@ -85,13 +85,13 @@ curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.s
   | bash -s -- --ai claude,opencode,codex --codex-target home --prefix .
 ```
 
-Supported presets for option A:
+Preset examples:
 
 ```text
 claude, opencode, codex, codex-home, all
 ```
 
-### 1.3 Update / Remove
+### 1.3 Update / remove
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh \
@@ -101,19 +101,35 @@ curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.s
   | bash -s -- --uninstall --preset claude --prefix .
 ```
 
-### 1.4 Verify
+### 1.4 Verify installation
 
 ```bash
 ls -la .specify .claude .codex .opencode
 ```
 
-You should see the folders for your selected agent(s) after install.
-For Codex, run workflows via `.codex/skills/specgate/<workflow>/SKILL.md` directly.
-If a workflow needs additional input, ask it directly in the Codex chat (do not rely on `AskUserQuestion`).
+If install is broken:
 
-## 2) Advanced: agent-by-agent lifecycle reference
+```bash
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh \
+  | bash -s -- --dry-run --preset claude --prefix .
 
-Pick one agent type first, then run one command per phase. (install|update|uninstall)
+curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh \
+  | bash -s -- --clean --preset claude --prefix .
+```
+
+Run locally from repo clone:
+
+```bash
+bash /path/to/specgate/install.sh --preset claude --prefix .
+```
+
+Installation is complete once your selected agent folders appear.
+Codex executes workflows directly from `.codex/skills/specgate/<workflow>/SKILL.md`.
+If a workflow needs user input, ask in chat directly instead of `AskUserQuestion`.
+
+## 2) Advanced: per-agent references
+
+Choose agent type first, then use the 3-step sequence (install|update|remove).
 
 ### Claude
 
@@ -137,9 +153,9 @@ bash /tmp/specgate-install.sh --update --preset opencode --prefix .
 bash /tmp/specgate-install.sh --uninstall --preset opencode --prefix .
 ```
 
-### Codex (project scope)
+### Codex (project scope, default)
 
-`--preset codex` is project scope by default.
+`--preset codex` uses project scope.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
@@ -163,46 +179,46 @@ bash /tmp/specgate-install.sh --uninstall --preset codex-home --prefix .
 
 ## 3) Advanced install modes
 
-### Remote install (single agent)
+### Single-agent remote install
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
 bash /tmp/specgate-install.sh --preset claude --prefix .
 ```
 
-### Combined install (multiple agents)
+### Multi-agent install guide
 
-Use one command when you want to install several agents together.
+Use one command with `--ai` to install multiple agents.
 
-Install Claude + Opencode in one run:
+1. Claude + Opencode
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
 bash /tmp/specgate-install.sh --ai claude,opencode --prefix .
 ```
 
-Install Claude + Opencode + Codex (project scope):
+2. Claude + Opencode + Codex (project scope)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
 bash /tmp/specgate-install.sh --ai claude,opencode,codex --prefix .
 ```
 
-Install Claude + Opencode + Codex (home scope):
+3. Claude + Opencode + Codex (home scope)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
 bash /tmp/specgate-install.sh --ai claude,opencode,codex --codex-target home --prefix .
 ```
 
-Install all agents (equivalent to `all`):
+4. All
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
 bash /tmp/specgate-install.sh --ai all --prefix .
 ```
 
-Update or remove the same set by adding `--update`/`--uninstall`:
+For update/remove on the same set, add `--update`/`--uninstall`.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
@@ -210,18 +226,19 @@ bash /tmp/specgate-install.sh --update --ai claude,opencode --prefix .
 bash /tmp/specgate-install.sh --uninstall --ai claude,opencode --prefix .
 ```
 
-### Installation mapping guide
-
-- Claude: install target becomes `.claude/commands/specgate/*`.
-- Opencode: install target becomes `.opencode/command/*`.
-- Codex + `--codex-target project`: `.codex/skills/specgate/*` (project scope).
-- Codex + `--codex-target home`: `~/.codex/skills/specgate/*` (shared by projects).
-- `--ai claude,opencode` installs both Claude and Opencode targets together.
-- `--ai claude,opencode,codex` installs the union of all selected targets.
-
 `--ai` and `--agent` are aliases.
+
 Supported values: `all`, `claude`, `codex`, `opencode`.
 (`--ai all` installs all known agent assets.)
+
+### Installation mapping
+
+- Claude: `.claude/commands/specgate/*`
+- Opencode: `.opencode/command/*`
+- Codex + `--codex-target project`: `.codex/skills/specgate/*` (project scope)
+- Codex + `--codex-target home`: `~/.codex/skills/specgate/*` (shared scope)
+- `--ai claude,opencode` installs both Claude and Opencode targets.
+- `--ai claude,opencode,codex` installs all selected targets.
 
 ### Install from local clone
 
@@ -232,23 +249,23 @@ Supported values: `all`, `claude`, `codex`, `opencode`.
 ## 4) Install options
 
 ```text
---prefix <path>     Install target directory (default: .)
---dry-run           Show plan only; no files are changed
---force             Overwrite existing target files/directories (no backup)
---update            Update only changed files in-place (no backup)
---clean             Remove selected SpecGate assets and reinstall
---version <name>    Install from branch/tag (default: main)
---preset <name>     Preset profile: claude | opencode | codex | codex-home | all
---ai <list>         Install scope
---agent <list>      Alias for --ai
---codex-target <project|home>  Where to install Codex Agent Skills when --ai includes codex (default: project)
---uninstall         Remove SpecGate assets instead of installing
+--prefix <path>              Install target directory (default: .)
+--dry-run                    Print planned operations only
+--force                      Overwrite existing files without backup
+--update                     Update only changed files (no backup)
+--clean                      Remove current SpecGate assets and reinstall
+--version <name>             Branch/tag to install (default: main)
+--preset <name>              Preset: claude | opencode | codex | codex-home | all
+--ai <list>                  Select agent list
+--agent <list>               Alias of --ai
+--codex-target <project|home> Install location for Codex Skills (default: project)
+--uninstall                  Run in remove mode
 ```
 
 Notes:
 
-- No backup files are generated by `install`, `uninstall`, `clean`, or `update`.
-- `--update` is safe to run repeatedly: unchanged files are skipped and only changed files are updated.
+- install/update/uninstall/clean never create backup files.
+- `--update` is safe for repeat runs; unchanged files are skipped.
 
 ### Examples
 
@@ -258,7 +275,7 @@ bash /tmp/specgate-install.sh --dry-run --preset codex --prefix .
 ```
 
 ```bash
-# Reset a broken or partial existing install in place
+# Reinstall from scratch when install state is partially broken
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
 bash /tmp/specgate-install.sh --clean --preset claude --prefix .
 ```
@@ -274,22 +291,22 @@ curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.s
 bash /tmp/specgate-install.sh --version v0.0.0 --prefix .
 ```
 
-## 5) Uninstall
+## 5) Remove
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
 bash /tmp/specgate-install.sh --uninstall --prefix .
 ```
 
-`--uninstall` without `--ai` or `--preset` removes all agents by default.
-To remove only one agent:
+If you omit `--ai` or `--preset`, all are removed by default (`all`).
+Remove one agent only:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
 bash /tmp/specgate-install.sh --uninstall --preset claude --prefix .
 ```
 
-Verify removal of all SpecGate assets:
+Verify removal:
 
 ```bash
 [ ! -d .specify ] \
@@ -301,10 +318,10 @@ Verify removal of all SpecGate assets:
   && echo "SpecGate assets removed."
 ```
 
-`statusline.js` is removed only if it was added by SpecGate (to avoid deleting custom user-installed statusline scripts).
-`--update` also skips `statusline.js` unless it has SpecGate ownership markers.
+`statusline.js` is only removed when it is identified as a SpecGate-owned file.
+`--update` also updates `statusline.js` only when ownership markers exist.
 
-If you installed Codex in home scope, remove with:
+If you installed Codex home scope:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/cutehackers/specgate/main/install.sh -o /tmp/specgate-install.sh
@@ -320,39 +337,141 @@ bash /tmp/specgate-install.sh --uninstall --preset codex-home --prefix .
 - `.specify/*`
 - `.claude/commands/specgate/*`
 - `.claude/hooks/statusline.js`
-- `.codex/skills/specgate/*` (project install: `.codex/skills/specgate`, or home install: `~/.codex/skills/specgate`)
-  - Includes workflow-dedicated skills: `feature-set`, `specify`, `clarify`, `codify`, `checklist`, `analyze`, `test-specify`, `test-codify`, `taskstoissues`, `constitution`, `feature-done`
+- `.codex/skills/specgate/*` (project install: `.codex/skills/specgate`, home install: `~/.codex/skills/specgate`)
+  - Workflow SKILL files: `feature-set`, `specify`, `clarify`, `codify`, `checklist`, `analyze`, `test-specify`, `test-codify`, `taskstoissues`, `constitution`, `feature-done`
 - `.opencode/command/*`
 - `docs/SPECGATE.md`
 - `.specify/scripts/bash/check-naming-policy.sh`
 - `.specify/scripts/bash/run-feature-workflow-sequence.sh`
 
-Note: `.specify` and `docs/SPECGATE.md` are always installed together for single-agent installs (`--ai codex`, `--ai claude`, etc.) and the equivalent presets (`--preset codex`, `--preset claude`, etc.).
+Note: even with single-agent installs (`--preset codex`, `--preset claude`), `.specify` and `docs/SPECGATE.md` are always installed.
 
-## 6) Recommended checks (instead of daily smoke check)
+## 6) Daily check guide (smoke-check substitute)
 
-Run production workflow checks from repository root:
+Run the following from repository root before working on a feature:
 
 ```bash
 bash .specify/scripts/bash/run-feature-workflow-sequence.sh --feature-dir <abs-feature-path> --json
-
 ```
 
-Strict naming is enabled by default. If a feature is still on a legacy artifact state, temporarily run with:
+Strict naming is enabled by default. Temporarily bypass for legacy artifacts:
 
 ```bash
 bash .specify/scripts/bash/run-feature-workflow-sequence.sh --feature-dir <abs-feature-path> --json --no-strict-naming
 ```
 
-For full production check, include a temporary setup step when you want code-template regeneration:
+## 6.1) Consumer-project layer governance (strict-layer toggle)
+
+In consumer projects, layer policy is resolved under `.specify/layer_rules`.
+
+- `.specify/layer_rules/contract.yaml`
+- `.specify/layer_rules/overrides/<feature-id>.yaml` (optional)
+
+Initialize/sync policy before strict runs:
 
 ```bash
-bash .specify/scripts/bash/run-feature-workflow-sequence.sh --feature-dir <abs-feature-path> --json --setup-code
+bash .specify/scripts/bash/bootstrap-layer-rules.sh --repo-root . --feature-dir "<abs-feature-path>" --json
 ```
 
-`specgate-smoke-check.sh` remains available as an installation validation script, but is not recommended as a routine daily check.
+Verify the effective policy before running gates:
 
-For detailed operation guidance, see `docs/SPECGATE.md`.
+```bash
+bash .specify/scripts/bash/load-layer-rules.sh --source-dir "<abs-feature-path>" --repo-root . --json
+```
+
+Parser dependency: `load-layer-rules.sh` requires `PyYAML` (recommended) or `ruamel.yaml` in the Python environment to parse YAML blocks deterministically. Without one of these, parsing errors are returned and policy resolution is treated as unreliable.
+
+### `load-layer-rules.sh` usage
+
+This command resolves merged layer policy from:
+
+- `.specify/layer_rules/contract.yaml` (global)
+- `.specify/layer_rules/overrides/<feature-id>.yaml` (override)
+- `<feature>/docs/ARCHITECTURE.md`
+- `<feature>/docs/architecture.md`
+- `<feature>/docs/constitution.md`
+- `<feature>/constitution.md`
+
+`--source-dir` checks only these files in that directory (no recursive scan):
+
+- `<source-dir>/docs/ARCHITECTURE.md`
+- `<source-dir>/docs/architecture.md`
+- `<source-dir>/docs/constitution.md`
+- `<source-dir>/constitution.md`
+
+Use cases:
+
+```bash
+# only inspect merged policy
+bash .specify/scripts/bash/load-layer-rules.sh --source-dir "<abs-feature-path>" --repo-root . --json
+
+# synchronize to contract.yaml
+bash .specify/scripts/bash/load-layer-rules.sh --source-dir "<abs-feature-path>" --repo-root . --write-contract --json
+
+# force overwrite contract.yaml
+bash .specify/scripts/bash/load-layer-rules.sh --source-dir "<abs-feature-path>" --repo-root . --write-contract --force-contract --json
+```
+
+Direct one-line example with an explicit architecture path:
+
+```bash
+bash .specify/scripts/bash/load-layer-rules.sh \
+  --source-dir "/Users/me/workspace/app/lib/src/features/home" \
+  --repo-root "/Users/me/workspace/app" \
+  --write-contract \
+  --force-contract \
+  --json
+```
+
+Legacy `--feature-dir` form is still supported.
+
+```bash
+bash .specify/scripts/bash/load-layer-rules.sh --feature-dir "<abs-feature-path>" --repo-root . --json
+```
+
+`load-layer-rules.sh` is the standard path for policy check/sync:
+
+- merge priority is `contract -> override -> architecture/constitution`
+- `--write-contract` writes merged result to `contract.yaml`
+- `--force-contract` replaces existing `contract.yaml`
+- verify using `contract_path` and `contract_written`
+
+Inspect outputs (`source_kind`, `source_file`, `source_reason`, `resolved_path`, `has_layer_rules`, `applied_sources`, `contract_path`, `contract_written`, `parse_events`, `parse_summary`) in JSON mode.
+In sequence runs (`run-feature-workflow-sequence.sh --json`), check `layer_rules_preflight` for parser preflight status before naming/code checks.
+
+`source_kind` examples:
+
+- `CONTRACT`: global contract loaded
+- `OVERRIDE`: feature override loaded
+- `CONSTITUTION` / `ARCHITECTURE`: extracted from feature docs
+- `CONTRACT_GENERATED`: contract was produced by `--write-contract`
+- `DEFAULT`: no source found (strict mode should fail)
+
+`strict-layer` is disabled by default (report-only). Run strict mode for hard failures on missing/violated rules:
+
+```bash
+bash .specify/scripts/bash/run-feature-workflow-sequence.sh --feature-dir "<abs-feature-path>" --strict-layer --strict-naming --json
+```
+
+Run relaxed mode temporarily (warnings + report only):
+
+```bash
+bash .specify/scripts/bash/run-feature-workflow-sequence.sh --feature-dir "<abs-feature-path>" --no-strict-layer --json
+```
+
+- `--strict-layer` treats missing/violated layer policy and parser failures as hard failure.
+  - Hard-fail conditions include `parse_summary.failed > 0` and `parse_summary.blocked_by_parser_missing > 0` from sequence paths-only preflight.
+- `--no-strict-layer` is for migration periods and keeps sequence green while reporting issues.
+
+Add `--setup-code` when you also want template generation.
+
+```bash
+bash .specify/scripts/bash/run-feature-workflow-sequence.sh --feature-dir "<abs-feature-path>" --json --setup-code
+```
+
+`specgate-smoke-check.sh` remains for install verification, not routine daily checks.
+
+See `docs/SPECGATE.md` for more operational details.
 
 ## Korean version
 

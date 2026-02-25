@@ -1,0 +1,48 @@
+version: "1"
+kind: "layer_rules"
+description: >
+  Default layer contract template. Place as a baseline into
+  `.specify/layer_rules/contract.yaml` from project root.
+  Feature-specific exceptions should go to
+  `.specify/layer_rules/overrides/<feature-id>.yaml`.
+
+naming:
+  entity: "{Name}Entity"
+  dto: "{Name}Dto"
+  use_case: "{Action}UseCase"
+  repository: "{Feature}Repository"
+  repository_impl: "{Feature}RepositoryImpl"
+  event: "{Feature}{Action}Event"
+  controller: "{Feature}Controller"
+  data_source: "{Feature}{Type}DataSource"
+  provider: "{featureName}{Type}Provider"
+
+layer_rules:
+  domain:
+    forbid_import_patterns:
+      - "^package:.*\\/data\\/"
+      - "^package:.*\\/presentation\\/"
+      - "^package:.*\\/ui\\/"
+  data:
+    forbid_import_patterns:
+      - "^package:.*\\/presentation\\/"
+  presentation:
+    forbid_import_patterns:
+      - "^package:.*\\/data\\/.+\\/(dto|data_source|datasource|repository_impl)"
+      - "^package:.*\\/domain\\/.+\\/(dto|entity)"
+
+errors:
+  policy:
+    domain_layer:
+      forbid_exceptions:
+        - StateError
+        - Exception
+      require_result_type: true
+
+behavior:
+  use_case:
+    allow_direct_repository_implementation_use: false
+
+operating_notes: >
+  In strict mode, unresolved or missing rules should fail implementation quality gates.
+  Use `.specify/scripts/bash/bootstrap-layer-rules.sh` to generate default files.

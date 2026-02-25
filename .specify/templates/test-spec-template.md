@@ -11,6 +11,7 @@
 - **Architecture Baseline**: `docs/ARCHITECTURE.md`
 - **Naming Source**: `<resolved docs/ARCHITECTURE.md or constitution path>`
 - **Naming Policy Rules**: <{{NAMING_RULES}}>
+- **Layer Rules Source**: `<resolved .specify/layer_rules/contract.yaml or .specify/layer_rules/overrides/...>`
 - **Testing Baseline**: `docs/TESTING_STANDARDS.md` (fallback: `.specify/memory/constitution.md`)
 
 > Use `NAMING_SOURCE_FILE` from a machine-readable `json` code block in

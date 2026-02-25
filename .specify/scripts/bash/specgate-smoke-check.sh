@@ -65,6 +65,7 @@ required_files=(
     ".specify/templates/test-spec-template.md"
     ".specify/templates/quickstart-template.md"
     ".specify/templates/screen-abstraction-template.md"
+    ".specify/templates/layer-rules-template.yaml"
     ".specify/scripts/bash/check-prerequisites.sh"
     ".specify/scripts/bash/check-spec-prerequisites.sh"
     ".specify/scripts/bash/check-code-prerequisites.sh"
@@ -72,6 +73,9 @@ required_files=(
     ".specify/scripts/bash/check-test-prerequisites.sh"
     ".specify/scripts/bash/check-implementation-quality.sh"
     ".specify/scripts/bash/check-implementation-readiness.sh"
+    ".specify/scripts/bash/check-layer-compliance.sh"
+    ".specify/scripts/bash/bootstrap-layer-rules.sh"
+    ".specify/scripts/bash/load-layer-rules.sh"
     ".specify/scripts/bash/check-test-coverage-targets.sh"
     ".specify/scripts/bash/specgate-sync-pointer.sh"
     ".specify/scripts/bash/specgate-status.sh"
@@ -394,6 +398,338 @@ if command -v node >/dev/null 2>&1; then
 else
     fail "node is not available for statusline syntax check"
 fi
+
+LAYER_SMOKE_ROOT="$(mktemp -d)"
+LAYER_SMOKE_FEATURE="$LAYER_SMOKE_ROOT/features/home"
+LAYER_SMOKE_OUTPUT="$(mktemp)"
+
+mkdir -p "$LAYER_SMOKE_ROOT/.specify/layer_rules"
+mkdir -p "$LAYER_SMOKE_FEATURE/docs"
+
+cat >"$LAYER_SMOKE_ROOT/.specify/layer_rules/contract.yaml" <<'EOF'
+layer_rules:
+  presentation:
+    forbid_import_patterns:
+      - '^package:legacy/data/'
+  domain:
+    forbid_import_patterns:
+      - '^package:legacy/data/.*'
+EOF
+
+cat >"$LAYER_SMOKE_FEATURE/docs/ARCHITECTURE.md" <<'EOF'
+# Home
+
+```yaml
+layer_rules:
+  presentation:
+    forbid_import_patterns:
+      - '^package:legacy/data/'
+```
+EOF
+
+if bash "$REPO_ROOT/.specify/scripts/bash/load-layer-rules.sh" \
+    --source-dir "$LAYER_SMOKE_FEATURE" \
+    --repo-root "$LAYER_SMOKE_ROOT" \
+    --no-write-resolved \
+    --json > "$LAYER_SMOKE_OUTPUT" 2>&1; then
+    if python3 - "$LAYER_SMOKE_OUTPUT" <<'PY'
+import json
+import sys
+
+raw = open(sys.argv[1], encoding="utf-8").read()
+try:
+    payload = json.loads(raw)
+except Exception as err:
+    raise SystemExit(f"load-layer-rules output is not valid JSON: {err}")
+
+if not isinstance(payload, dict):
+    raise SystemExit("load-layer-rules payload is not a JSON object")
+
+errors = payload.get("errors", [])
+if errors:
+    raise SystemExit(f"load-layer-rules reported parse failures: {errors!r}")
+
+if not bool(payload.get("has_layer_rules")):
+    raise SystemExit("load-layer-rules fixture did not resolve layer_rules")
+PY
+    then
+        pass "load-layer-rules parser smoke check passed with valid policy input"
+    else
+        fail "load-layer-rules parser smoke check failed: output validation failed"
+        cat "$LAYER_SMOKE_OUTPUT" >&2
+    fi
+else
+    fail "load-layer-rules parser smoke check failed to execute"
+    cat "$LAYER_SMOKE_OUTPUT" >&2
+fi
+
+cat >"$LAYER_SMOKE_ROOT/.specify/layer_rules/contract.yaml" <<'EOF'
+layer_rules:
+  presentation
+    forbid_import_patterns:
+      - '^package:legacy/data/'
+EOF
+
+cat >"$LAYER_SMOKE_FEATURE/docs/ARCHITECTURE.md" <<'EOF'
+# Home
+
+```yaml
+layer_rules:
+  presentation:
+    forbid_import_patterns:
+      - '^package:legacy/data/'
+```
+EOF
+
+if bash "$REPO_ROOT/.specify/scripts/bash/load-layer-rules.sh" \
+    --source-dir "$LAYER_SMOKE_FEATURE" \
+    --repo-root "$LAYER_SMOKE_ROOT" \
+    --no-write-resolved \
+    --json > "$LAYER_SMOKE_OUTPUT" 2>&1; then
+    if python3 - "$LAYER_SMOKE_OUTPUT" <<'PY'
+import json
+import sys
+
+payload = json.loads(open(sys.argv[1], encoding="utf-8").read())
+errors = payload.get("errors", [])
+if not errors:
+    raise SystemExit("malformed architecture input did not produce parse errors")
+PY
+    then
+        pass "load-layer-rules parser smoke check flagged malformed YAML as expected"
+    else
+        fail "load-layer-rules malformed input smoke check failed"
+        cat "$LAYER_SMOKE_OUTPUT" >&2
+    fi
+else
+    fail "load-layer-rules malformed input smoke command failed unexpectedly"
+    cat "$LAYER_SMOKE_OUTPUT" >&2
+fi
+
+cat >"$LAYER_SMOKE_ROOT/.specify/layer_rules/contract.yaml" <<'EOF'
+foo: bar
+EOF
+
+cat >"$LAYER_SMOKE_FEATURE/docs/ARCHITECTURE.md" <<'EOF'
+# Home
+
+```yaml
+layer_rules:
+  presentation:
+    forbid_import_patterns:
+      - '^package:legacy/data/'
+```
+EOF
+
+if bash "$REPO_ROOT/.specify/scripts/bash/load-layer-rules.sh" \
+    --source-dir "$LAYER_SMOKE_FEATURE" \
+    --repo-root "$LAYER_SMOKE_ROOT" \
+    --no-write-resolved \
+    --json > "$LAYER_SMOKE_OUTPUT" 2>&1; then
+    if python3 - "$LAYER_SMOKE_OUTPUT" <<'PY'
+import json
+import sys
+
+payload = json.loads(open(sys.argv[1], encoding="utf-8").read())
+parse_summary = payload.get("parse_summary", {})
+if isinstance(parse_summary, str):
+    parse_summary = json.loads(parse_summary)
+if int(parse_summary.get("schema_mismatch", 0) or 0) <= 0:
+    raise SystemExit("schema_mismatch counter did not increase for non-policy candidate")
+
+if not bool(payload.get("has_layer_rules")):
+    raise SystemExit("schema mismatch preflight did not resolve valid architecture layer_rules")
+PY
+    then
+        pass "load-layer-rules parser smoke check captured schema mismatch while resolving fallback layer_rules"
+    else
+        fail "load-layer-rules schema mismatch smoke check failed"
+        cat "$LAYER_SMOKE_OUTPUT" >&2
+    fi
+else
+    fail "load-layer-rules schema mismatch smoke command failed"
+    cat "$LAYER_SMOKE_OUTPUT" >&2
+fi
+
+cat >"$LAYER_SMOKE_ROOT/.specify/layer_rules/contract.yaml" <<'EOF'
+'foo': bar
+EOF
+
+cat >"$LAYER_SMOKE_FEATURE/docs/ARCHITECTURE.md" <<'EOF'
+# Home
+
+```yaml
+layer_rules:
+  presentation:
+    forbid_import_patterns:
+      - '^package:legacy/data/'
+```
+EOF
+
+if bash "$REPO_ROOT/.specify/scripts/bash/load-layer-rules.sh" \
+    --source-dir "$LAYER_SMOKE_FEATURE" \
+    --repo-root "$LAYER_SMOKE_ROOT" \
+    --no-write-resolved \
+    --json > "$LAYER_SMOKE_OUTPUT" 2>&1; then
+    if python3 - "$LAYER_SMOKE_OUTPUT" <<'PY'
+import json
+import sys
+
+payload = json.loads(open(sys.argv[1], encoding="utf-8").read())
+parse_events = payload.get("parse_events", [])
+if not isinstance(parse_events, list):
+    raise SystemExit("parse_events is missing or not a list")
+
+if not any(event.get("code") == "JSON_PARSE_ERROR" for event in parse_events):
+    raise SystemExit("parser did not record JSON_PARSE_ERROR for non-standard json policy input")
+
+parse_summary = payload.get("parse_summary", {})
+if isinstance(parse_summary, str):
+    parse_summary = json.loads(parse_summary)
+if int(parse_summary.get("failed", 0) or 0) <= 0:
+    raise SystemExit("parser did not count failed JSON parse events")
+PY
+    then
+        pass "load-layer-rules parser smoke check reported JSON_PARSE_ERROR path as expected"
+    else
+        fail "load-layer-rules JSON parse smoke check failed"
+        cat "$LAYER_SMOKE_OUTPUT" >&2
+    fi
+else
+    fail "load-layer-rules JSON parse smoke command failed"
+    cat "$LAYER_SMOKE_OUTPUT" >&2
+fi
+
+LAYER_SMOKE_SEQUENCE_FEATURE="$LAYER_SMOKE_ROOT/features/workflow-sequence"
+mkdir -p "$LAYER_SMOKE_SEQUENCE_FEATURE/docs"
+cat >"$LAYER_SMOKE_SEQUENCE_FEATURE/docs/ARCHITECTURE.md" <<'EOF'
+# Sequence
+
+```yaml
+layer_rules:
+  presentation:
+    forbid_import_patterns:
+      - '^package:legacy/data/'
+```
+EOF
+cat >"$LAYER_SMOKE_SEQUENCE_FEATURE/docs/spec.md" <<'EOF'
+# Sequence feature
+EOF
+
+LAYER_SMOKE_CONTRACT_BACKUP="$(mktemp)"
+if cp "$REPO_ROOT/.specify/layer_rules/contract.yaml" "$LAYER_SMOKE_CONTRACT_BACKUP"; then
+    cat >"$REPO_ROOT/.specify/layer_rules/contract.yaml" <<'EOF'
+layer_rules
+  presentation:
+    forbid_import_patterns:
+      - '^package:legacy/data/'
+EOF
+
+    if bash "$REPO_ROOT/.specify/scripts/bash/run-feature-workflow-sequence.sh" \
+        --feature-dir "$LAYER_SMOKE_SEQUENCE_FEATURE" \
+        --strict-layer \
+        --json \
+        --continue-on-failure > "$LAYER_SMOKE_OUTPUT" 2>&1; then
+        fail "run-feature-workflow strict-layer unexpectedly passed with malformed layer contract"
+    else
+        if python3 - "$LAYER_SMOKE_OUTPUT" <<'PY'
+import json
+import sys
+
+payload = json.load(open(sys.argv[1], encoding="utf-8"))
+if payload.get("status") != "failed":
+    raise SystemExit(f"workflow status expected failed, got {payload.get('status')!r}")
+
+preflight = payload.get("layer_rules_preflight")
+if not isinstance(preflight, dict):
+    raise SystemExit("layer_rules_preflight missing from strict workflow output")
+
+if not bool(preflight.get("strict_layer", False)):
+    raise SystemExit("strict_layer flag was not propagated into preflight")
+if not bool(preflight.get("strict_parse_blocked", False)):
+    raise SystemExit("strict_parse_blocked should be true for malformed policy")
+
+parse_summary = preflight.get("parse_summary", {})
+if not isinstance(parse_summary, dict):
+    raise SystemExit("parse_summary missing or invalid in preflight")
+if int(parse_summary.get("failed", 0) or 0) <= 0 and int(parse_summary.get("blocked_by_parser_missing", 0) or 0) <= 0:
+    raise SystemExit("preflight parse_summary did not record failing parser counters")
+
+failed_steps = payload.get("failed_steps", [])
+if not any(isinstance(item, dict) and item.get("step") == "paths-only" for item in failed_steps):
+    raise SystemExit("paths-only failure missing from failed_steps")
+PY
+        then
+            pass "run-feature-workflow strict-layer parse gate failed as expected with contract parse errors"
+        else
+            fail "run-feature-workflow strict-layer smoke check failed"
+            cat "$LAYER_SMOKE_OUTPUT" >&2
+        fi
+    fi
+
+    if ! cp "$LAYER_SMOKE_CONTRACT_BACKUP" "$REPO_ROOT/.specify/layer_rules/contract.yaml"; then
+        fail "failed to restore layer contract.yaml after strict-mode sequence smoke check"
+    fi
+else
+    fail "could not backup layer contract.yaml for strict-mode sequence smoke check"
+fi
+
+rm -f "$LAYER_SMOKE_CONTRACT_BACKUP"
+
+if bash "$REPO_ROOT/.specify/scripts/bash/run-feature-workflow-sequence.sh" \
+    --feature-dir "$LAYER_SMOKE_SEQUENCE_FEATURE" \
+    --json \
+    --continue-on-failure \
+    --no-strict-layer \
+    --no-strict-naming > "$LAYER_SMOKE_OUTPUT" 2>&1; then
+    :
+fi
+
+if python3 - "$LAYER_SMOKE_OUTPUT" <<'PY'
+import json
+import sys
+
+payload = json.load(open(sys.argv[1], encoding="utf-8"))
+preflight = payload.get("layer_rules_preflight")
+if not isinstance(preflight, dict):
+    raise SystemExit("layer_rules_preflight missing from workflow output")
+
+required = {
+    "source_kind",
+    "source_file",
+    "source_reason",
+    "resolved_path",
+    "has_layer_rules",
+    "parse_summary",
+    "parse_events",
+    "parse_events_count",
+    "strict_layer",
+    "strict_parse_blocked",
+    "parse_policy_action",
+}
+missing = sorted(key for key in required if key not in preflight)
+if missing:
+    raise SystemExit(f"layer_rules_preflight missing required keys: {missing}")
+
+parse_events = preflight.get("parse_events", [])
+if not isinstance(parse_events, list):
+    raise SystemExit("parse_events is missing or not a list")
+if preflight.get("parse_events_count") != len(parse_events):
+    raise SystemExit("parse_events_count does not match parse_events length")
+
+parse_summary = preflight.get("parse_summary", {})
+if not isinstance(parse_summary, dict):
+    raise SystemExit("parse_summary is missing or not a dict")
+PY
+then
+    pass "run-feature-workflow layer_rules_preflight schema includes required machine-readable fields"
+else
+    fail "run-feature-workflow layer_rules_preflight schema validation failed"
+    cat "$LAYER_SMOKE_OUTPUT" >&2
+fi
+
+rm -f "$LAYER_SMOKE_OUTPUT"
+rm -rf "$LAYER_SMOKE_ROOT"
 
 if [[ "$FAILED" -gt 0 ]]; then
     echo
