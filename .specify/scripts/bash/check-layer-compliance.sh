@@ -49,27 +49,70 @@ source "$SCRIPT_DIR/common.sh"
 
 eval $(get_feature_paths "$FEATURE_DIR_ARG") || exit 1
 
-python3 - "$FEATURE_DIR" "$LAYER_RULES_POLICY_JSON" "$STRICT_LAYER" "$LAYER_RULES_SOURCE_KIND" "$LAYER_RULES_SOURCE_FILE" "$LAYER_RULES_SOURCE_REASON" "$JSON_MODE" <<'PY'
+python3 - "$FEATURE_DIR" "$LAYER_RULES_POLICY_JSON" "$STRICT_LAYER" "$LAYER_RULES_SOURCE_KIND" "$LAYER_RULES_SOURCE_FILE" "$LAYER_RULES_SOURCE_REASON" "$LAYER_RULES_SOURCE_MODE" "$LAYER_RULES_INFERENCE_CONFIDENCE" "$LAYER_RULES_INFERENCE_RULES_EXTRACTED" "$LAYER_RULES_INFERENCE_FALLBACK" "$LAYER_RULES_PARSE_SUMMARY" "$JSON_MODE" <<'PY'
 import json
 import re
 import sys
 from pathlib import Path
 
 
+def to_bool(value):
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def to_int(value, default=0):
+    try:
+        return int(value)
+    except Exception:
+        return default
+
+
+def to_float(value, default=0.0):
+    try:
+        return float(value)
+    except Exception:
+        return default
+
+
 feature_dir = Path(sys.argv[1]).resolve()
 raw_policy = sys.argv[2] if len(sys.argv) > 2 else "{}"
-strict_layer = sys.argv[3].lower() == "true" if len(sys.argv) > 3 else False
+strict_layer = to_bool(sys.argv[3]) if len(sys.argv) > 3 else False
 layer_rules_source = {
     "kind": sys.argv[4] if len(sys.argv) > 4 else "DEFAULT",
     "file": sys.argv[5] if len(sys.argv) > 5 else "",
     "reason": sys.argv[6] if len(sys.argv) > 6 else "No layer rules metadata provided.",
+    "mode": str(sys.argv[7] if len(sys.argv) > 7 else "DEFAULT").upper(),
 }
-json_mode = sys.argv[7].lower() == "true" if len(sys.argv) > 7 else False
+inference_confidence = to_float(sys.argv[8] if len(sys.argv) > 8 else 0.0, 0.0)
+inference_rules_extracted = to_int(sys.argv[9] if len(sys.argv) > 9 else 0, 0)
+inference_fallback_applied = to_bool(sys.argv[10]) if len(sys.argv) > 10 else False
+parse_summary_raw = sys.argv[11] if len(sys.argv) > 11 else "{}"
+json_mode = to_bool(sys.argv[12]) if len(sys.argv) > 12 else False
 
 try:
     policy = json.loads(raw_policy) if raw_policy else {}
 except Exception:
     policy = {}
+
+if layer_rules_source["mode"] not in {"PARSED", "INFERRED", "DEFAULT"}:
+    if layer_rules_source["mode"] == "CONTRACT_GENERATED":
+        layer_rules_source["mode"] = "PARSED"
+    else:
+        layer_rules_source["mode"] = "DEFAULT"
+
+try:
+    parse_summary = json.loads(parse_summary_raw)
+except Exception:
+    parse_summary = {}
+if not isinstance(parse_summary, dict):
+    parse_summary = {}
+
+parse_failed = to_int(parse_summary.get("failed", 0), 0)
+parse_blocked = to_int(parse_summary.get("blocked_by_parser_missing", 0), 0)
+parse_schema_mismatch = to_int(parse_summary.get("schema_mismatch", 0), 0)
+has_parser_issues = parse_failed > 0 or parse_blocked > 0 or parse_schema_mismatch > 0
 
 layer_rules = policy.get("layer_rules") if isinstance(policy, dict) else {}
 if not isinstance(layer_rules, dict):
@@ -136,9 +179,9 @@ for layer, data in layer_rules.items():
 
 findings = []
 warnings = []
-
 policy_parse_errors = []
 policy_parse_warnings = []
+
 if isinstance(policy, dict):
     raw_parse_errors = policy.get("errors", [])
     if isinstance(raw_parse_errors, list):
@@ -153,20 +196,6 @@ for warning in policy_parse_warnings:
 for error in policy_parse_errors:
     if isinstance(error, str):
         warnings.append(f"policy parse issue: {error}")
-
-# Non-strict mode does not fail by default when policy is missing.
-policy_available_warning = ""
-if not layer_rules_present:
-    policy_available_warning = (
-        "No usable layer_rules section resolved from .specify/layer_rules/contract.yaml "
-        "or override/architecture/constitution documents."
-    )
-    if strict_layer:
-        warnings.append(
-            policy_available_warning
-            + " Define contract.yaml (or run load-layer-rules.sh --write-contract) and rerun in strict mode."
-        )
-
 
 if not layer_rules_present:
     scanned_files = 0
@@ -282,26 +311,94 @@ else:
                             stripped,
                         )
 
+policy_available_warning = ""
+if not layer_rules_present:
+    policy_available_warning = (
+        "No usable layer_rules section resolved from .specify/layer_rules/contract.yaml "
+        "or override/architecture/constitution documents."
+    )
 
-error_count = len([item for item in findings if item["severity"] == "error"])
-warning_count = len([item for item in findings if item["severity"] == "warning"])
+parse_policy_action = "ok"
+strict_message = ""
 
-if strict_layer:
-    ok = layer_rules_present and error_count == 0 and not policy_parse_errors
+if layer_rules_source["mode"] == "INFERRED":
+    if layer_rules_present and inference_confidence < 0.5:
+        parse_policy_action = "fail"
+        strict_message = (
+            "Inferred policy confidence is below 0.50; strict-mode requires >= 0.50."
+        )
+    elif not layer_rules_present:
+        parse_policy_action = "fail" if strict_layer else "warn"
+        strict_message = "No resolved layer_rules section was produced from inferred policy."
+    elif inference_confidence < 0.75:
+        parse_policy_action = "warn"
+        warnings.append(
+            f"Inferred policy confidence ({inference_confidence:.2f}) is below strict threshold (0.75)."
+        )
+    elif has_parser_issues:
+        parse_policy_action = "warn"
+        warnings.append(
+            "Layer policy parser reported schema or parser issues; strict mode allows inferred policy with warnings."
+        )
+elif has_parser_issues:
+    parse_policy_action = "warn" if not strict_layer else "fail"
+    strict_message = (
+        "Layer policy parser reported schema or parser issues; strict mode requires clean parse results."
+    )
+
+if strict_layer and layer_rules_source["mode"] in {"PARSED", "DEFAULT"} and not layer_rules_present:
+    parse_policy_action = "fail"
+    strict_message = (
+        policy_available_warning + " Define contract.yaml (or run load-layer-rules.sh --write-contract) and rerun in strict mode."
+    )
+
+if strict_layer and parse_policy_action == "fail":
+    if strict_message and strict_message not in warnings:
+        warnings.append(strict_message)
+    ok = False
 else:
-    ok = True
-    if not layer_rules_present and policy_available_warning:
+    error_count = len([item for item in findings if item["severity"] == "error"])
+    if strict_layer:
+        ok = (
+            layer_rules_present
+            and not policy_parse_errors
+            and error_count == 0
+        )
+    else:
+        ok = True
+    if not strict_layer and not layer_rules_present:
         warnings.append(
             policy_available_warning
             + " Add/regenerate .specify/layer_rules/contract.yaml and continue. "
             "Example: .specify/scripts/bash/load-layer-rules.sh --source-dir <abs feature path> --repo-root <repo root> --write-contract --json"
         )
 
+if strict_layer and layer_rules_source["mode"] == "INFERRED" and has_parser_issues:
+    warnings.append(
+        "Parser warnings were recorded while resolving explicit policy sources. Inference fallback was applied."
+    )
+
+if layer_rules_source["mode"] == "INFERRED":
+    warnings.append(
+        f"Inferred policy confidence={inference_confidence:.2f}, rules_extracted={inference_rules_extracted}, fallback_applied={str(bool(inference_fallback_applied)).lower()}"
+    )
+
+error_count = len([item for item in findings if item["severity"] == "error"])
+warning_count = len([item for item in findings if item["severity"] == "warning"])
+
 payload = {
-    "ok": ok,
+    "ok": bool(ok),
     "strict": strict_layer,
     "policy_present": layer_rules_present,
     "layer_rules_source": layer_rules_source,
+    "source_mode": layer_rules_source["mode"],
+    "parse_summary": parse_summary,
+    "parse_policy_action": parse_policy_action,
+    "inference": {
+        "confidence": inference_confidence,
+        "rules_extracted": inference_rules_extracted,
+        "fallback_applied": bool(inference_fallback_applied),
+    },
     "scanned_files": scanned_files,
     "checked_files": checked_files,
     "findings": findings,
@@ -326,18 +423,25 @@ payload = {
 
 if json_mode:
     print(json.dumps(payload, ensure_ascii=False))
-    raise SystemExit(0 if ok else 1)
+    raise SystemExit(0 if payload["ok"] else 1)
 
-if ok:
+if payload["ok"]:
     print(f"OK: layer policy compliance passed for {feature_dir}")
 else:
     print("ERROR: layer policy compliance failed:", file=sys.stderr)
 
 print(f"  source_kind={layer_rules_source['kind']}")
+print(f"  source_mode={layer_rules_source['mode']}")
 print(f"  source_file={layer_rules_source['file'] or '<none>'}")
 print(f"  reason={layer_rules_source['reason']}")
+if layer_rules_source["mode"] == "INFERRED":
+    print(
+        f"  inference.confidence={inference_confidence:.2f} "
+        f"rules_extracted={inference_rules_extracted} "
+        f"fallback_applied={str(bool(inference_fallback_applied)).lower()}"
+    )
 print(f"  strict_layer={strict_layer}")
-print(f"  checked_files={checked_files}/{scanned_files}")
+print(f"  parse_action={parse_policy_action}")
 
 if payload["warnings"]:
     print("Warnings:")
@@ -357,5 +461,4 @@ if payload["advice"]:
     for item in payload["advice"]:
         print(f"  - {item}")
 
-raise SystemExit(0 if ok else 1)
-PY
+raise SystemExit(0 if payload["ok"] else 1)

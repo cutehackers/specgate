@@ -31,7 +31,7 @@ This repository can be installed directly into your project without cloning.
   - It is created when `/feature-set` runs in a consumer repository.
   - It is not included in package distribution.
 
-## 1) Beginner install (recommended)
+## 1.2) Beginner install (recommended)
 
 ### Option A) Install one agent
 
@@ -126,6 +126,97 @@ bash /path/to/specgate/install.sh --preset claude --prefix .
 Installation is complete once your selected agent folders appear.
 Codex executes workflows directly from `.codex/skills/specgate/<workflow>/SKILL.md`.
 If a workflow needs user input, ask in chat directly instead of `AskUserQuestion`.
+
+## 1.5) Architecture-driven layer policy (inference-first)
+
+You can generate layer policy from prose-first architecture docs without maintaining JSON/YAML payloads in every feature.
+
+```bash
+cp docs/architecture-template.md "<abs-feature-path>/docs/ARCHITECTURE.md"
+bash .specify/scripts/bash/load-layer-rules.sh --source-dir "<abs-feature-path>/docs" --repo-root . --write-contract --json
+```
+
+Recommended workflow:
+
+- Keep `docs/ARCHITECTURE.md` (human-readable, prose-first).
+- Add an explicit `layer_rules` block only when needed (use ` ```layer_rules`), when available.
+- Run `load-layer-rules.sh`:
+  - `source_mode` becomes `INFERRED` when parsing is not possible.
+  - `source_kind` becomes `INFERRED`.
+  - `inference.confidence` and `inference.evidence` are stored in JSON output.
+- strict mode notes:
+  - `confidence >= 0.75` passes parse action as accepted.
+  - `0.5 ~ 0.75` emits warning but proceeds.
+  - `< 0.5` is treated as low-confidence and can fail strict checks depending on `--strict-layer`.
+
+### 1.5.0) Convert an existing `ARCHITECTURE.md` to template-ready format
+
+If you already have `docs/ARCHITECTURE.md`, you can migrate it without rewriting everything.
+
+1) Backup original document first.
+```bash
+cp "<feature-path>/docs/ARCHITECTURE.md" "<feature-path>/docs/ARCHITECTURE.md.bak"
+```
+
+2) Keep user-readable content and add/align required signal sections:
+- `## Presentation` section contains: `- Do not import Data layer types in Presentation.`
+- `## Domain` section contains: `- Do not import Presentation.` and/or `- Do not import Data layer types in Domain.`
+- `## Data` section contains: `- Do not import Presentation.`
+- Add `errors` and `behavior` constraints in text form (for example: return type required, `StateError` forbidden, `dispatch`-only state changes).
+
+3) Optional machine-readable block (recommended for deterministic extraction):
+```layer_rules
+kind: layer_rules
+version: "1"
+layer_rules:
+  domain:
+    forbid_import_patterns:
+      - "^package:.*\\/presentation\\/"
+      - "^package:.*\\/data\\/"
+  data:
+    forbid_import_patterns:
+      - "^package:.*\\/presentation\\/"
+  presentation:
+    forbid_import_patterns:
+      - "^package:.*\\/data\\/"
+```
+
+4) Validate immediately:
+```bash
+bash .specify/scripts/bash/load-layer-rules.sh \
+  --source-dir "<feature-path>/docs" \
+  --repo-root . \
+  --write-contract \
+  --json
+```
+
+5) Verify in JSON:
+- `source_mode` should become `INFERRED` (if no block) or `PARSED` (if block exists).
+- `inference.confidence` should ideally be `>= 0.75`.
+- `inference.evidence` should include at least:
+  - one `layer_rules.<layer>.forbid_import_patterns` entry
+  - naming/behavior/error hints if you added them
+- `policy.layer_rules` should not be empty.
+
+You can use the full migration checklist from `docs/architecture-template.md`.
+
+See:
+
+- User template: [`docs/architecture-template.md`](docs/architecture-template.md)
+- Runtime template: [`.specify/templates/architecture-template.md`](.specify/templates/architecture-template.md)
+- Runtime docs: [docs/SPECGATE.md](docs/SPECGATE.md)
+
+### 1.5.1) Production validation
+
+- Inference/strict-mode smoke validation:
+  ```bash
+  bash .specify/scripts/bash/specgate-smoke-check.sh
+  ```
+- Additional regression checks to run before release:
+  - `bash .specify/scripts/bash/load-layer-rules.sh --source-dir <feature-path>/docs --repo-root . --write-contract --json`
+  - `bash .specify/scripts/bash/check-layer-compliance.sh --feature-dir <feature-path> --strict-layer --json`
+  - `bash .specify/scripts/bash/run-feature-workflow-sequence.sh --feature-dir <feature-path> --strict-layer --json`
+- Verified on 2026-02-25: smoke checks pass, including prose-only inference with confidence/evidence metadata.
 
 ## 2) Advanced: per-agent references
 

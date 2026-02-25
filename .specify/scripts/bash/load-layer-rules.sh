@@ -134,6 +134,7 @@ python3 - "$REPO_ROOT" "$POLICY_SOURCE_DIR" "$FEATURE_ID_ARG" "$WRITE_CONTRACT" 
 import json
 import re
 import sys
+import copy
 from pathlib import Path
 
 repo_root = Path(sys.argv[1]).resolve()
@@ -637,6 +638,469 @@ def parse_json_payload(text: str, source: str, candidate_type: str, candidate_in
     return parsed
 
 
+def parse_yaml_for_template(text: str):
+    try:
+        import yaml  # type: ignore
+        parsed = yaml.safe_load(text)
+        if isinstance(parsed, dict):
+            return parsed
+    except Exception:
+        pass
+
+    try:
+        from ruamel.yaml import YAML  # type: ignore
+        loader = YAML(typ="safe")
+        parsed = loader.load(text)
+        if isinstance(parsed, dict):
+            return parsed
+    except Exception:
+        pass
+
+    return parse_yaml_subset(text)
+
+
+def load_template_policy():
+    template_path = repo_root / ".specify" / "templates" / "layer-rules-template.yaml"
+    if not template_path.is_file():
+        return {
+            "kind": "layer_rules",
+            "version": "1",
+            "naming": {
+                "entity": "{Name}Entity",
+                "dto": "{Name}Dto",
+                "use_case": "{Action}UseCase",
+                "repository": "{Feature}Repository",
+                "repository_impl": "{Feature}RepositoryImpl",
+                "event": "{Feature}{Action}Event",
+                "controller": "{Feature}Controller",
+                "data_source": "{Feature}{Type}DataSource",
+                "provider": "{featureName}{Type}Provider",
+            },
+            "layer_rules": {
+                "domain": {
+                    "forbid_import_patterns": [
+                        "^package:.*\\/data\\/",
+                        "^package:.*\\/presentation\\/",
+                        "^package:.*\\/ui\\/",
+                    ]
+                },
+                "data": {"forbid_import_patterns": ["^package:.*\\/presentation\\/"]},
+                "presentation": {
+                    "forbid_import_patterns": [
+                        "^package:.*\\/data\\/.+\\/(dto|data_source|datasource|repository_impl)",
+                        "^package:.*\\/domain\\/.+\\/(dto|entity)",
+                    ]
+                },
+            },
+            "errors": {
+                "policy": {
+                    "domain_layer": {
+                        "forbid_exceptions": ["StateError", "Exception"],
+                        "require_result_type": True,
+                    }
+                }
+            },
+            "behavior": {"use_case": {"allow_direct_repository_implementation_use": False}},
+        }
+
+    try:
+        template_text = template_path.read_text(encoding="utf-8")
+    except Exception as err:
+        warnings.append(f"Failed to read template policy at {template_path}: {err}")
+        return {}
+
+    template = parse_yaml_for_template(template_text)
+    if isinstance(template, dict):
+        return template
+
+    warnings.append(
+        f"Template policy at {template_path} could not be parsed as YAML dict; returning default policy."
+    )
+    return {}
+
+
+def _normalize_layer_name(raw: str):
+    normalized = (raw or "").strip().lower()
+    if not normalized:
+        return ""
+    replacements = {
+        "ui": "presentation",
+        "presentation layer": "presentation",
+        "data layer": "data",
+        "domain layer": "domain",
+        "business": "domain",
+    }
+    if normalized in replacements:
+        return replacements[normalized]
+    if "presentation" in normalized:
+        return "presentation"
+    if "data" in normalized:
+        return "data"
+    if "domain" in normalized:
+        return "domain"
+    return normalized
+
+
+def _extract_layer_from_text(raw: str):
+    normalized = (raw or "").strip().lower()
+    if not normalized:
+        return ""
+    return _normalize_layer_name(normalized)
+
+
+def _merge_layer_patterns(dst: dict, source_layer: str, pattern: str, source: str):
+    if not source_layer or not pattern:
+        return
+    layer_block = dst.setdefault(source_layer, {})
+    if not isinstance(layer_block, dict):
+        dst[source_layer] = {}
+        layer_block = dst[source_layer]
+    patterns = layer_block.setdefault("forbid_import_patterns", [])
+    if not isinstance(patterns, list):
+        patterns = []
+        layer_block["forbid_import_patterns"] = patterns
+    if pattern not in patterns:
+        patterns.append(pattern)
+
+
+def extract_doc_signals(path: Path):
+    signals = {
+        "naming": {},
+        "layer_rules": {},
+        "errors": {"policy": {"domain_layer": {}}},
+        "behavior": {"use_case": {}},
+        "evidence": [],
+    }
+
+    if not path.is_file():
+        return signals
+
+    try:
+        text = path.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        return signals
+
+    heading_re = re.compile(r"^\s*#{1,6}\s+(.*?)\s*$")
+    import_block_re = re.compile(r"^\s*import\s+['\"]([^'\"]+)['\"]")
+    named_prohibition_re = re.compile(
+        r"(?i)\b(?:do not|don't|must not|should not|avoid|forbid|forbidden)\b.*\bimport\b"
+    )
+    explicit_import_bad_re = re.compile(
+        r"(?i)(?:❌|WRONG|NOT_GOOD|bad|wrong)\s*.*\bimport\s+['\"]([^'\"]+)['\"]"
+    )
+    naming_hint_re = re.compile(
+        r"(?i)\b(entity|dto|use[-_ ]case|repository[-_ ]impl|repository|event|controller|data[-_ ]source|provider)\b[^\n]*?`([^`]+)`"
+    )
+    return_type_re = re.compile(
+        r"(?i)\b(return\s+type|result\s+type)\b.*\b(must|should|required)\b"
+    )
+    repository_impl_prohibition_re = re.compile(
+        r"(?i)\b(do not|don't|must not|should not|forbid|forbidden)\b[^\n]*\brepository_impl\b"
+    )
+    exception_name_re = re.compile(r"\b([A-Z][A-Za-z0-9_]*Exception|Exception)\b")
+
+    layer_pattern = re.compile(r"\b(domain|data|presentation|ui|ui layer|business layer|data layer|domain layer)\b", re.IGNORECASE)
+
+    in_code_block = False
+    current_section = ""
+    active_layer_section = ""
+    pending_bad_import_example = False
+    for line_no, raw_line in enumerate(text.splitlines(), start=1):
+        stripped = raw_line.strip()
+        if stripped.startswith("```") or stripped.startswith("~~~"):
+            in_code_block = not in_code_block
+            continue
+
+        heading_match = heading_re.match(raw_line)
+        if heading_match and not in_code_block:
+            heading = heading_match.group(1).strip()
+            normalized_heading = re.sub(r"\s+", " ", heading.lower())
+            current_section = normalized_heading
+            resolved_layer = _extract_layer_from_text(current_section)
+            if resolved_layer in {"domain", "data", "presentation"}:
+                active_layer_section = resolved_layer
+            continue
+
+        normalized = re.sub(r"\s+", " ", stripped.lower())
+
+        if in_code_block:
+            import_match = import_block_re.search(stripped)
+            if not stripped:
+                pending_bad_import_example = False
+            if explicit_import_bad_re.search(stripped):
+                pending_bad_import_example = True
+                continue
+
+            if import_match:
+                import_target = import_match.group(1).strip()
+                if pending_bad_import_example:
+                    source_layer = _extract_layer_from_text(active_layer_section)
+                    if not source_layer:
+                        source_layer = _extract_layer_from_text(current_section.split(" ", 1)[0])
+                    if source_layer in {"domain", "data", "presentation"}:
+                        pattern = "^" + re.escape(import_target) + "$"
+                        _merge_layer_patterns(signals["layer_rules"], source_layer, pattern, path)
+                        signals["evidence"].append(
+                            {
+                                "file": str(path),
+                                "line": line_no,
+                                "pattern": pattern,
+                                "rule": f"layer_rules.{source_layer}.forbid_import_patterns",
+                                "signal": "bad_import_example",
+                                "text": stripped,
+                            }
+                        )
+                    pending_bad_import_example = False
+                    continue
+            else:
+                pending_bad_import_example = False
+            continue
+
+        if named_prohibition_re.search(normalized):
+            source_layer = _extract_layer_from_text(current_section)
+            if source_layer not in {"domain", "data", "presentation"}:
+                source_layer = _extract_layer_from_text(active_layer_section)
+            if source_layer in {"domain", "data", "presentation"}:
+                mentioned = layer_pattern.findall(normalized)
+                for item in mentioned:
+                    target_layer = _normalize_layer_name(item)
+                    if not target_layer or target_layer == source_layer:
+                        continue
+                    pattern = f"^package:.*\\\\/{re.escape(target_layer)}\\\\/"
+                    _merge_layer_patterns(signals["layer_rules"], source_layer, pattern, path)
+                    signals["evidence"].append(
+                        {
+                            "file": str(path),
+                            "line": line_no,
+                            "pattern": pattern,
+                            "rule": f"layer_rules.{source_layer}.forbid_import_patterns",
+                            "signal": "explicit_prohibition",
+                            "text": stripped,
+                        }
+                    )
+
+        naming_match = naming_hint_re.search(stripped)
+        if naming_match:
+            key = naming_match.group(1).strip().lower().replace("-", "_").replace(" ", "_")
+            if key == "use_case":
+                key = "use_case"
+            if key == "data_source":
+                key = "data_source"
+            if key == "repository_impl":
+                key = "repository_impl"
+            value = naming_match.group(2).strip()
+            existing = signals["naming"].get(key)
+            if not existing:
+                signals["naming"][key] = value
+            elif existing != value:
+                signals["evidence"].append(
+                    {
+                        "file": str(path),
+                        "line": line_no,
+                        "pattern": value,
+                        "rule": f"naming.{key}",
+                        "signal": "naming_conflict",
+                        "text": stripped,
+                    }
+                )
+            signals["evidence"].append(
+                {
+                    "file": str(path),
+                    "line": line_no,
+                    "pattern": value,
+                    "rule": f"naming.{key}",
+                    "signal": "naming_hint",
+                    "text": stripped,
+                }
+            )
+
+        if return_type_re.search(normalized):
+            if "errors" in signals and isinstance(signals["errors"], dict):
+                policy = signals["errors"].setdefault("policy", {})
+                if isinstance(policy, dict):
+                    domain_layer = policy.setdefault("domain_layer", {})
+                    if isinstance(domain_layer, dict):
+                        domain_layer["require_result_type"] = True
+                        signals["evidence"].append(
+                            {
+                                "file": str(path),
+                                "line": line_no,
+                                "pattern": "^explicit_return_type$",
+                                "rule": "errors.policy.domain_layer.require_result_type",
+                                "signal": "explicit_prohibition",
+                                "text": stripped,
+                            }
+                        )
+
+        if repository_impl_prohibition_re.search(normalized):
+            behavior = signals["behavior"].setdefault("use_case", {})
+            behavior["allow_direct_repository_implementation_use"] = False
+            signals["evidence"].append(
+                {
+                    "file": str(path),
+                    "line": line_no,
+                    "pattern": "repository_impl",
+                    "rule": "behavior.use_case.allow_direct_repository_implementation_use",
+                    "signal": "explicit_prohibition",
+                    "text": stripped,
+                }
+            )
+
+        if "exception" in normalized:
+            if current_section.find("error") >= 0 or current_section.find("exception") >= 0:
+                exception_policy = signals["errors"].setdefault("policy", {}).setdefault("domain_layer", {})
+                forbid = exception_policy.setdefault("forbid_exceptions", [])
+                if not isinstance(forbid, list):
+                    forbid = []
+                    exception_policy["forbid_exceptions"] = forbid
+                for match in exception_name_re.findall(normalized):
+                    if match not in forbid:
+                        forbid.append(match)
+                        signals["evidence"].append(
+                            {
+                                "file": str(path),
+                                "line": line_no,
+                                "pattern": match,
+                                "rule": "errors.policy.domain_layer.forbid_exceptions",
+                                "signal": "explicit_prohibition",
+                                "text": stripped,
+                            }
+                        )
+
+    return signals
+
+
+def infer_layer_rules(signals):
+    inferred = {
+        "kind": "layer_rules",
+        "version": "1",
+    }
+
+    naming = signals.get("naming", {})
+    if isinstance(naming, dict) and naming:
+        inferred["naming"] = copy.deepcopy({k: v for k, v in naming.items() if v})
+
+    layer_rules = signals.get("layer_rules", {})
+    if isinstance(layer_rules, dict) and layer_rules:
+        for layer, layer_signal in layer_rules.items():
+            if layer not in {"domain", "data", "presentation"}:
+                continue
+            if not isinstance(layer_signal, dict):
+                continue
+            patterns = layer_signal.get("forbid_import_patterns", [])
+            if isinstance(patterns, list) and patterns:
+                filtered = [str(item) for item in patterns if str(item).strip()]
+                if filtered:
+                    inferred.setdefault("layer_rules", {}).setdefault(layer, {})["forbid_import_patterns"] = filtered
+
+    errors = signals.get("errors", {})
+    if isinstance(errors, dict):
+        policy = errors.get("policy", {})
+        if isinstance(policy, dict):
+            domain_layer = policy.get("domain_layer", {})
+            if isinstance(domain_layer, dict):
+                inferred_domain = {"forbid_exceptions": [], "require_result_type": None}
+                forbid = domain_layer.get("forbid_exceptions", [])
+                if isinstance(forbid, list) and forbid:
+                    inferred_domain["forbid_exceptions"] = [str(item) for item in forbid]
+                if isinstance(domain_layer.get("require_result_type"), bool):
+                    inferred_domain["require_result_type"] = bool(domain_layer.get("require_result_type"))
+                if inferred_domain["forbid_exceptions"] or inferred_domain["require_result_type"] is not None:
+                    inferred.setdefault("errors", {}).setdefault("policy", {})["domain_layer"] = {
+                        "forbid_exceptions": inferred_domain["forbid_exceptions"],
+                        "require_result_type": bool(inferred_domain["require_result_type"]),
+                    }
+
+    behavior = signals.get("behavior", {})
+    if isinstance(behavior, dict):
+        use_case = behavior.get("use_case", {})
+        if isinstance(use_case, dict):
+            if use_case.get("allow_direct_repository_implementation_use") is False:
+                inferred.setdefault("behavior", {}).setdefault("use_case", {})[
+                    "allow_direct_repository_implementation_use"
+                ] = False
+
+    # Remove empty keys
+    if "naming" in inferred and not inferred["naming"]:
+        inferred.pop("naming", None)
+    if "layer_rules" in inferred and not inferred["layer_rules"]:
+        inferred.pop("layer_rules", None)
+    if "errors" in inferred and not inferred["errors"]:
+        inferred.pop("errors", None)
+    if "behavior" in inferred and not inferred["behavior"]:
+        inferred.pop("behavior", None)
+
+    return inferred
+
+
+def evaluate_inference_confidence(signals, inferred_policy):
+    evidence = signals.get("evidence", [])
+    score = 0.0
+
+    weights = {
+        "explicit_prohibition": 0.25,
+        "bad_import_example": 0.15,
+        "naming_hint": 0.10,
+    }
+
+    for item in evidence:
+        signal_type = str(item.get("signal", "")).strip().lower()
+        score += weights.get(signal_type, 0.0)
+
+    naming_conflicts = sum(1 for item in evidence if str(item.get("signal", "")) == "naming_conflict")
+    if naming_conflicts:
+        score -= 0.05 * naming_conflicts
+
+    if score < 0.0:
+        score = 0.0
+    if score > 1.0:
+        score = 1.0
+
+    rules_extracted = 0
+    if isinstance(inferred_policy, dict):
+        if "naming" in inferred_policy and isinstance(inferred_policy["naming"], dict):
+            rules_extracted += len(inferred_policy["naming"])
+        if "layer_rules" in inferred_policy and isinstance(inferred_policy["layer_rules"], dict):
+            for layer_rules in inferred_policy["layer_rules"].values():
+                if isinstance(layer_rules, dict):
+                    rules = layer_rules.get("forbid_import_patterns", [])
+                    if isinstance(rules, list):
+                        rules_extracted += len(rules)
+        if "errors" in inferred_policy and isinstance(inferred_policy["errors"], dict):
+            domain_layer = inferred_policy["errors"].get("policy", {}).get("domain_layer", {})
+            if isinstance(domain_layer, dict):
+                if isinstance(domain_layer.get("forbid_exceptions"), list):
+                    rules_extracted += len(domain_layer["forbid_exceptions"])
+                if isinstance(domain_layer.get("require_result_type"), bool):
+                    rules_extracted += 1
+        if "behavior" in inferred_policy and isinstance(inferred_policy["behavior"], dict):
+            use_case = inferred_policy["behavior"].get("use_case", {})
+            if isinstance(use_case, dict) and "allow_direct_repository_implementation_use" in use_case:
+                rules_extracted += 1
+
+    evidence_sanitized = []
+    for item in evidence:
+        if not isinstance(item, dict):
+            continue
+        evidence_sanitized.append(
+            {
+                "source": item.get("file", ""),
+                "line": int(item.get("line", 0) or 0),
+                "pattern": item.get("pattern", ""),
+                "rule": item.get("rule", ""),
+                "signal": str(item.get("signal", "")),
+                "text": item.get("text", ""),
+            }
+        )
+
+    return score, rules_extracted, evidence_sanitized
+
+
+def merge_policy_with_template(base_policy: dict, inferred_policy: dict):
+    merged = copy.deepcopy(base_policy or {})
+    return merge_dict(merged, inferred_policy or {})
+
+
 def summarize_parser_events(events):
     summary = {
         "total": len(events),
@@ -769,10 +1233,12 @@ if policy_source_dir.is_file():
         explicit_source_kind = "ARCHITECTURE"
     elif policy_source_dir.name.lower() == "constitution.md":
         explicit_source_kind = "CONSTITUTION"
-    if policy_source_dir.parent.name == "docs":
-        feature_path = policy_source_dir.parent.parent
-    else:
-        feature_path = policy_source_dir.parent
+if policy_source_dir.is_dir() and policy_source_dir.name == "docs":
+    feature_path = policy_source_dir.parent
+elif policy_source_dir.parent.name == "docs":
+    feature_path = policy_source_dir.parent.parent
+else:
+    feature_path = policy_source_dir.parent
 
 if requested_feature_id:
     layer_feature_id = normalize_name(requested_feature_id)
@@ -797,6 +1263,8 @@ def choose_existing_path(*paths):
 
 feature_arch = choose_existing_path(feature_arch_main, feature_arch_lower)
 feature_const = choose_existing_path(feature_cons, feature_cons_root)
+feature_arch_files = [path for path in (feature_arch_main, feature_arch_lower) if path.is_file()]
+feature_const_files = [path for path in (feature_cons, feature_cons_root) if path.is_file()]
 
 candidate_sources = []
 if explicit_source_file:
@@ -814,8 +1282,16 @@ if feature_arch is not None:
     candidate_sources.append((feature_arch, "ARCHITECTURE", "Feature architecture"))
 
 policy = {}
+source_mode_resolved = "DEFAULT"
 applied_sources = []
 contract_written = False
+inference_metadata = {
+    "confidence": 0.0,
+    "evidence": [],
+    "rules_extracted": 0,
+    "fallback_applied": False,
+}
+baseline_policy = {}
 
 for source_path, source_kind, source_desc in candidate_sources:
     parsed = extract_file_name(str(source_path))
@@ -824,6 +1300,7 @@ for source_path, source_kind, source_desc in candidate_sources:
         continue
     policy = merge_dict(policy, _parsed)
     source_kind_resolved = source_kind
+    source_mode_resolved = "PARSED"
     source_file = str(source_path)
     source_reason = f"Loaded from {source_desc}: {source_path}"
     applied_sources.append({
@@ -834,12 +1311,76 @@ for source_path, source_kind, source_desc in candidate_sources:
     })
 
 if not applied_sources:
-    source_kind_resolved = "DEFAULT"
+    source_mode_resolved = "INFERRED"
     source_file = ""
-    source_reason = "No usable layer_rules source found; using empty policy fallback."
+    source_reason = "No usable explicit policy block found; trying inference from prose documentation."
+    baseline_policy = load_template_policy()
+    baseline_policy = baseline_policy or {}
+    signals = {
+        "naming": {},
+        "layer_rules": {},
+        "errors": {},
+        "behavior": {},
+        "evidence": [],
+    }
+
+    seen_candidates = set()
+    for candidate in feature_arch_files + feature_const_files:
+        candidate_real = str(candidate.resolve())
+        candidate_key = candidate_real.casefold()
+        if candidate_key in seen_candidates:
+            continue
+        seen_candidates.add(candidate_key)
+        extracted = extract_doc_signals(candidate)
+        if isinstance(extracted, dict):
+            layer_rules_signals = extracted.get("layer_rules", {})
+            naming_signals = extracted.get("naming", {})
+            errors_signals = extracted.get("errors", {})
+            behavior_signals = extracted.get("behavior", {})
+            evidence = extracted.get("evidence", [])
+
+            if isinstance(layer_rules_signals, dict):
+                merge_dict(signals.setdefault("layer_rules", {}), layer_rules_signals)
+            if isinstance(naming_signals, dict):
+                merge_dict(signals.setdefault("naming", {}), naming_signals)
+            if isinstance(errors_signals, dict):
+                merge_dict(signals.setdefault("errors", {}), errors_signals)
+            if isinstance(behavior_signals, dict):
+                merge_dict(signals.setdefault("behavior", {}), behavior_signals)
+            if isinstance(evidence, list):
+                signals["evidence"].extend(evidence)
+
+    inferred_policy = infer_layer_rules(signals)
+    if inferred_policy:
+        confidence, rules_extracted, evidence = evaluate_inference_confidence(signals, inferred_policy)
+        inference_metadata["confidence"] = confidence
+        inference_metadata["rules_extracted"] = int(rules_extracted)
+        inference_metadata["evidence"] = evidence
+        inference_metadata["fallback_applied"] = int(rules_extracted) > 0
+        policy = merge_policy_with_template(baseline_policy, inferred_policy)
+        source_kind_resolved = "INFERRED"
+        source_reason = "No parseable policy block found. Applied inference from prose documentation."
+        if feature_arch_files or feature_const_files:
+            source_file = str(feature_arch_files[0] if feature_arch_files else feature_const_files[0])
+        else:
+            source_file = ""
+        if source_file:
+            applied_sources.append({
+                "kind": "INFERRED",
+                "file": source_file,
+                "path": source_file,
+                "reason": source_reason,
+            })
+    else:
+        source_mode_resolved = "DEFAULT"
+        source_kind_resolved = "DEFAULT"
+        source_reason = "No usable layer_rules source found; using baseline template policy only."
+        policy = merge_policy_with_template(baseline_policy, {})
 
 if not policy:
     policy = {}
+    source_kind_resolved = "DEFAULT"
+    source_mode_resolved = "DEFAULT"
 
 if write_contract:
     if not policy:
@@ -868,11 +1409,24 @@ if write_contract:
             with contract_path.open("w", encoding="utf-8") as fp:
                 fp.write(rendered)
             contract_written = True
-            source_kind_resolved = "CONTRACT_GENERATED"
+            source_kind_resolved = source_kind_resolved or "DEFAULT"
             source_file = str(contract_path)
-            source_reason = (
-                f"Generated from loaded policy and written to {contract_path}"
-            )
+            if source_mode_resolved == "INFERRED":
+                source_reason = (
+                    f"Generated from inferred policy and written to {contract_path}"
+                )
+            else:
+                source_reason = (
+                    f"Generated from loaded policy and written to {contract_path}"
+                )
+            if inference_metadata.get("fallback_applied"):
+                source_mode_resolved = "INFERRED"
+            elif not source_mode_resolved:
+                source_mode_resolved = "PARSED"
+            elif source_kind_resolved == "DEFAULT":
+                source_mode_resolved = "DEFAULT"
+            else:
+                source_mode_resolved = "PARSED"
         except Exception as err:
             warnings.append(f"Failed to write contract.yaml: {err}")
 
@@ -890,12 +1444,16 @@ if write_resolved:
 layer_rules_block = policy.get("layer_rules")
 has_layer_rules = isinstance(layer_rules_block, dict) and bool(layer_rules_block)
 if not applied_sources:
-    warnings.append("No layer_rules source was found. Governance checks fall back to empty policy.")
+    if inference_metadata.get("fallback_applied"):
+        warnings.append("No explicit layer_rules source was found. Policy was inferred from prose documentation.")
+    else:
+        warnings.append("No explicit layer_rules source was found. Baseline policy template was used.")
 if not has_layer_rules:
     warnings.append("Resolved policy does not contain a non-empty layer_rules section.")
 
 result = {
     "source_kind": source_kind_resolved,
+    "source_mode": source_mode_resolved,
     "source_file": source_file,
     "source_reason": source_reason,
     "has_layer_rules": bool(has_layer_rules),
@@ -909,6 +1467,10 @@ result = {
     "policy": policy,
     "parse_events": parser_events,
     "parse_summary": summarize_parser_events(parser_events),
+    "inference": inference_metadata,
+    "inference_confidence": float(inference_metadata.get("confidence", 0.0) or 0.0),
+    "inference_rules_extracted": int(inference_metadata.get("rules_extracted", 0) or 0),
+    "inference_fallback_applied": bool(inference_metadata.get("fallback_applied", False)),
 }
 
 print(json.dumps(result, ensure_ascii=False))

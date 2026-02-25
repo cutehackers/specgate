@@ -369,6 +369,11 @@ resolve_layer_rules_source() {
     LAYER_RULES_SOURCE_KIND="DEFAULT"
     LAYER_RULES_SOURCE_FILE=""
     LAYER_RULES_SOURCE_REASON="No resolved layer_rules source found. Using defaults."
+    LAYER_RULES_SOURCE_MODE="DEFAULT"
+    LAYER_RULES_INFERENCE_CONFIDENCE="0.0"
+    LAYER_RULES_INFERENCE_RULES_EXTRACTED="0"
+    LAYER_RULES_INFERENCE_FALLBACK="false"
+    LAYER_RULES_INFERENCE_EVIDENCE="[]"
     LAYER_RULES_POLICY_JSON="{}"
     LAYER_RULES_RESOLVED_PATH=""
     LAYER_RULES_HAS_LAYER_RULES="false"
@@ -415,8 +420,24 @@ if not isinstance(payload, dict):
 print("LAYER_RULES_SOURCE_KIND=" + payload.get("source_kind", "DEFAULT"))
 print("LAYER_RULES_SOURCE_FILE=" + payload.get("source_file", ""))
 print("LAYER_RULES_SOURCE_REASON=" + payload.get("source_reason", ""))
+print("LAYER_RULES_SOURCE_MODE=" + payload.get("source_mode", payload.get("source_kind", "DEFAULT")))
 print("LAYER_RULES_RESOLVED_PATH=" + payload.get("resolved_path", ""))
 print("LAYER_RULES_HAS_LAYER_RULES=" + ("true" if bool(payload.get("has_layer_rules", False)) else "false"))
+inference_confidence = float(payload.get("inference_confidence", payload.get("inference", {}).get("confidence", 0.0) or 0.0))
+inference_rules_extracted = int(payload.get("inference_rules_extracted", payload.get("inference", {}).get("rules_extracted", 0) or 0))
+inference_fallback_applied = str(
+    payload.get("inference_fallback_applied", "")
+    or payload.get("inference", {}).get("fallback_applied", False)
+).lower()
+print("LAYER_RULES_INFERENCE_CONFIDENCE=" + str(inference_confidence))
+print("LAYER_RULES_INFERENCE_RULES_EXTRACTED=" + str(inference_rules_extracted))
+print("LAYER_RULES_INFERENCE_FALLBACK=" + inference_fallback_applied)
+inference_evidence = payload.get("inference_evidence")
+if not isinstance(inference_evidence, list):
+    inference_evidence = payload.get("inference", {}).get("evidence", [])
+    if not isinstance(inference_evidence, list):
+        inference_evidence = []
+print(f"LAYER_RULES_INFERENCE_EVIDENCE={json.dumps(inference_evidence, ensure_ascii=False, separators=(',', ':'))}")
 print(f"LAYER_RULES_PARSE_EVENTS={json.dumps(payload.get('parse_events', []), ensure_ascii=False, separators=(',', ':'))}")
 print(f"LAYER_RULES_PARSE_SUMMARY={json.dumps(payload.get('parse_summary', {}), ensure_ascii=False, separators=(',', ':'))}")
 parse_summary = payload.get('parse_summary', {})
@@ -438,9 +459,14 @@ PY
             LAYER_RULES_SOURCE_KIND=*) LAYER_RULES_SOURCE_KIND="${pair#LAYER_RULES_SOURCE_KIND=}" ;;
             LAYER_RULES_SOURCE_FILE=*) LAYER_RULES_SOURCE_FILE="${pair#LAYER_RULES_SOURCE_FILE=}" ;;
             LAYER_RULES_SOURCE_REASON=*) LAYER_RULES_SOURCE_REASON="${pair#LAYER_RULES_SOURCE_REASON=}" ;;
+            LAYER_RULES_SOURCE_MODE=*) LAYER_RULES_SOURCE_MODE="${pair#LAYER_RULES_SOURCE_MODE=}" ;;
             LAYER_RULES_RESOLVED_PATH=*) LAYER_RULES_RESOLVED_PATH="${pair#LAYER_RULES_RESOLVED_PATH=}" ;;
             LAYER_RULES_HAS_LAYER_RULES=*) LAYER_RULES_HAS_LAYER_RULES="${pair#LAYER_RULES_HAS_LAYER_RULES=}" ;;
             LAYER_RULES_POLICY_JSON=*) LAYER_RULES_POLICY_JSON="${pair#LAYER_RULES_POLICY_JSON=}" ;;
+            LAYER_RULES_INFERENCE_CONFIDENCE=*) LAYER_RULES_INFERENCE_CONFIDENCE="${pair#LAYER_RULES_INFERENCE_CONFIDENCE=}" ;;
+            LAYER_RULES_INFERENCE_RULES_EXTRACTED=*) LAYER_RULES_INFERENCE_RULES_EXTRACTED="${pair#LAYER_RULES_INFERENCE_RULES_EXTRACTED=}" ;;
+            LAYER_RULES_INFERENCE_FALLBACK=*) LAYER_RULES_INFERENCE_FALLBACK="${pair#LAYER_RULES_INFERENCE_FALLBACK=}" ;;
+            LAYER_RULES_INFERENCE_EVIDENCE=*) LAYER_RULES_INFERENCE_EVIDENCE="${pair#LAYER_RULES_INFERENCE_EVIDENCE=}" ;;
             LAYER_RULES_PARSE_EVENTS=*) LAYER_RULES_PARSE_EVENTS="${pair#LAYER_RULES_PARSE_EVENTS=}" ;;
             LAYER_RULES_PARSE_SUMMARY=*) LAYER_RULES_PARSE_SUMMARY="${pair#LAYER_RULES_PARSE_SUMMARY=}" ;;
             LAYER_RULES_PARSE_BLOCKED_BY_PARSER=*) LAYER_RULES_PARSE_BLOCKED_BY_PARSER="${pair#LAYER_RULES_PARSE_BLOCKED_BY_PARSER=}" ;;
@@ -533,6 +559,11 @@ get_feature_paths() {
     printf 'LAYER_RULES_SOURCE_KIND=%q\n' "$LAYER_RULES_SOURCE_KIND"
     printf 'LAYER_RULES_SOURCE_FILE=%q\n' "$LAYER_RULES_SOURCE_FILE"
     printf 'LAYER_RULES_SOURCE_REASON=%q\n' "$LAYER_RULES_SOURCE_REASON"
+    printf 'LAYER_RULES_SOURCE_MODE=%q\n' "$LAYER_RULES_SOURCE_MODE"
+    printf 'LAYER_RULES_INFERENCE_CONFIDENCE=%q\n' "$LAYER_RULES_INFERENCE_CONFIDENCE"
+    printf 'LAYER_RULES_INFERENCE_RULES_EXTRACTED=%q\n' "$LAYER_RULES_INFERENCE_RULES_EXTRACTED"
+    printf 'LAYER_RULES_INFERENCE_FALLBACK=%q\n' "$LAYER_RULES_INFERENCE_FALLBACK"
+    printf 'LAYER_RULES_INFERENCE_EVIDENCE=%q\n' "$LAYER_RULES_INFERENCE_EVIDENCE"
     printf 'LAYER_RULES_RESOLVED_PATH=%q\n' "$LAYER_RULES_RESOLVED_PATH"
     printf 'LAYER_RULES_HAS_LAYER_RULES=%q\n' "$LAYER_RULES_HAS_LAYER_RULES"
     printf 'LAYER_RULES_POLICY_JSON=%q\n' "$LAYER_RULES_POLICY_JSON"

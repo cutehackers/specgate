@@ -96,6 +96,10 @@ LAST_PATHS_ONLY_PARSE_BLOCKED=0
 LAST_PATHS_ONLY_PARSE_FAILED=0
 LAST_PATHS_ONLY_PARSE_SCHEMA_MISMATCH=0
 LAST_PATHS_ONLY_HAS_LAYER_RULES="false"
+LAST_PATHS_ONLY_PARSE_SOURCE_MODE="DEFAULT"
+LAST_PATHS_ONLY_INFERENCE_CONFIDENCE="0"
+LAST_PATHS_ONLY_INFERENCE_RULES_EXTRACTED="0"
+LAST_PATHS_ONLY_INFERENCE_FALLBACK="false"
 LAST_PATHS_ONLY_PARSE_GATE_REASON=""
 LAST_PATHS_ONLY_PARSE_ACTION="ok"
 
@@ -127,6 +131,11 @@ print("schema_mismatch=0")
 print("has_layer_rules=false")
 print("parse_summary={}")
 print("parse_total=0")
+print("parse_source_mode=DEFAULT")
+print("parse_inference_confidence=0")
+print("parse_inference_rules_extracted=0")
+print("parse_inference_fallback=false")
+print("parse_action=ok")
 
 if not raw:
     if strict:
@@ -157,38 +166,76 @@ failed = int(summary.get("failed", 0) or 0)
 schema_mismatch = int(summary.get("schema_mismatch", 0) or 0)
 total = int(summary.get("total", 0) or 0)
 has_layer_rules = str(payload.get("LAYER_RULES_HAS_LAYER_RULES", "false")).lower() in {"1", "true", "yes", "y", "on"}
+source_mode = str(payload.get("LAYER_RULES_SOURCE_MODE", payload.get("LAYER_RULES_SOURCE_KIND", "DEFAULT"))).upper()
+inference_confidence = float(payload.get("LAYER_RULES_INFERENCE_CONFIDENCE", 0) or 0)
+inference_rules_extracted = int(payload.get("LAYER_RULES_INFERENCE_RULES_EXTRACTED", 0) or 0)
+inference_fallback = str(payload.get("LAYER_RULES_INFERENCE_FALLBACK", "false")).lower() in {"1", "true", "yes", "on"}
+
+if source_mode not in {"PARSED", "INFERRED", "DEFAULT"}:
+    if source_mode == "CONTRACT_GENERATED":
+        source_mode = "PARSED"
+    else:
+        source_mode = "DEFAULT"
 
 print(f"blocked_by_parser_missing={blocked}")
 print(f"parse_failed={failed}")
 print(f"schema_mismatch={schema_mismatch}")
 print(f"parse_total={total}")
+print(f"parse_source_mode={source_mode}")
+print(f"parse_inference_confidence={inference_confidence}")
+print(f"parse_inference_rules_extracted={inference_rules_extracted}")
+print(f"parse_inference_fallback={str(inference_fallback).lower()}")
 print("parse_summary=" + json.dumps(summary, ensure_ascii=False, separators=(",", ":")))
 print("has_layer_rules=" + ("true" if has_layer_rules else "false"))
 
-if strict and (blocked > 0 or failed > 0 or not has_layer_rules):
-    print("parse_action=fail")
-    reasons = []
-    if blocked > 0 or failed > 0:
-        reasons.append(
-            f"blocked_by_parser_missing={blocked}, parse_failed={failed}, schema_mismatch={schema_mismatch}"
-        )
-    if not has_layer_rules:
-        reasons.append("no layer_rules resolved")
-    print("reason= strict-layer parse gate failed: " + ", ".join(reasons))
-elif failed > 0 or blocked > 0 or schema_mismatch > 0:
-    print("parse_action=warn")
-else:
-    print("parse_action=ok")
-
-if strict and (blocked > 0 or failed > 0 or not has_layer_rules):
-    print("gate_failed=1")
-    if blocked > 0 or failed > 0:
-        print(
-            f"reason=strict-layer parse gate failed: "
-            f"blocked_by_parser_missing={blocked}, parse_failed={failed}, schema_mismatch={schema_mismatch}"
-        )
-    else:
+parse_action = "ok"
+if strict:
+    if source_mode == "PARSED":
+        if blocked > 0 or failed > 0 or schema_mismatch > 0 or not has_layer_rules:
+            parse_action = "fail"
+            reasons = []
+            if blocked > 0 or failed > 0 or schema_mismatch > 0:
+                reasons.append(
+                    f"blocked_by_parser_missing={blocked}, parse_failed={failed}, schema_mismatch={schema_mismatch}"
+                )
+            if not has_layer_rules:
+                reasons.append("no layer_rules resolved")
+            print("reason= strict-layer parse gate failed: " + ", ".join(reasons))
+    elif source_mode == "INFERRED":
+        if not has_layer_rules:
+            parse_action = "fail"
+            print("reason=strict-layer parse gate failed: no layer_rules resolved from inferred policy")
+        elif inference_confidence < 0.5:
+            parse_action = "fail"
+            print("reason=strict-layer parse gate failed: inferred policy confidence below 0.5")
+        elif inference_confidence < 0.75:
+            parse_action = "warn"
+            print("reason=strict-layer parse gate warning: inferred policy confidence below 0.75")
+        elif blocked > 0 or failed > 0 or schema_mismatch > 0:
+            parse_action = "warn"
+            print("reason=strict-layer parse gate warning: parser warnings observed while inferred policy resolved")
+    elif not has_layer_rules:
+        parse_action = "fail"
         print("reason=strict-layer parse gate failed: no layer_rules resolved")
+else:
+    if failed > 0 or blocked > 0 or schema_mismatch > 0:
+        parse_action = "warn"
+        if source_mode == "INFERRED" and not has_layer_rules:
+            print("reason=paths-only parser warning: no layer_rules resolved")
+        elif source_mode == "INFERRED":
+            print("reason=paths-only parser warning: parser warnings observed while inferred policy resolved")
+    elif source_mode == "INFERRED" and 0.5 <= inference_confidence < 0.75:
+        parse_action = "warn"
+        print("reason=paths-only parser warning: inferred policy confidence below 0.75")
+
+print(f"parse_action={parse_action}")
+
+if strict and parse_action == "fail":
+    print("gate_failed=1")
+elif parse_action == "warn":
+    if not strict and not has_layer_rules:
+        print("reason=no layer_rules resolved but continuing as non-strict")
+
 PY
 )"
 
@@ -196,6 +243,18 @@ PY
         case "$key" in
             parse_summary)
                 LAST_PATHS_ONLY_PARSE_SUMMARY="${value}"
+                ;;
+            parse_source_mode)
+                LAST_PATHS_ONLY_PARSE_SOURCE_MODE="${value}"
+                ;;
+            parse_inference_confidence)
+                LAST_PATHS_ONLY_INFERENCE_CONFIDENCE="${value}"
+                ;;
+            parse_inference_rules_extracted)
+                LAST_PATHS_ONLY_INFERENCE_RULES_EXTRACTED="${value}"
+                ;;
+            parse_inference_fallback)
+                LAST_PATHS_ONLY_INFERENCE_FALLBACK="${value}"
                 ;;
             blocked_by_parser_missing)
                 LAST_PATHS_ONLY_PARSE_BLOCKED="${value}"
@@ -297,7 +356,11 @@ run_step() {
 
         output="${output}"$'\n'"LAYER_RULES_PARSE_SUMMARY=${LAST_PATHS_ONLY_PARSE_SUMMARY}"
         output="${output}"$'\n'"LAYER_RULES_PARSE_ACTION=${LAST_PATHS_ONLY_PARSE_ACTION}"
+        output="${output}"$'\n'"LAYER_RULES_SOURCE_MODE=${LAST_PATHS_ONLY_PARSE_SOURCE_MODE}"
         output="${output}"$'\n'"LAYER_RULES_HAS_LAYER_RULES=${LAST_PATHS_ONLY_HAS_LAYER_RULES}"
+        output="${output}"$'\n'"LAYER_RULES_INFERENCE_CONFIDENCE=${LAST_PATHS_ONLY_INFERENCE_CONFIDENCE}"
+        output="${output}"$'\n'"LAYER_RULES_INFERENCE_RULES_EXTRACTED=${LAST_PATHS_ONLY_INFERENCE_RULES_EXTRACTED}"
+        output="${output}"$'\n'"LAYER_RULES_INFERENCE_FALLBACK=${LAST_PATHS_ONLY_INFERENCE_FALLBACK}"
         output="${output}"$'\n'"LAYER_RULES_PARSE_FAILED=${LAST_PATHS_ONLY_PARSE_FAILED}"
         output="${output}"$'\n'"LAYER_RULES_PARSE_BLOCKED=${LAST_PATHS_ONLY_PARSE_BLOCKED}"
         output="${output}"$'\n'"LAYER_RULES_PARSE_SCHEMA_MISMATCH=${LAST_PATHS_ONLY_PARSE_SCHEMA_MISMATCH}"
@@ -362,85 +425,145 @@ with summary_path.open(encoding="utf-8") as fp:
             }
         steps.append(step)
 
-result = {
-    "feature_dir": feature_dir,
-    "sequence_completed": all(step.get("ok") for step in steps),
-    "stop_on_failure": stop_on_fail,
-    "setup_code_included": run_setup,
-    "step_count": len(steps),
-    "steps": steps,
-}
+    result = {
+        "feature_dir": feature_dir,
+        "sequence_completed": all(step.get("ok") for step in steps),
+        "stop_on_failure": stop_on_fail,
+        "setup_code_included": run_setup,
+        "step_count": len(steps),
+        "steps": steps,
+    }
 
-failed = [step for step in steps if not step.get("ok")]
-if failed:
-    result["status"] = "failed"
-    result["failed_steps"] = [{"step": s["step"], "command": s["command"], "exit_code": s["exit_code"]} for s in failed]
-else:
-    result["status"] = "passed"
+    failed = [step for step in steps if not step.get("ok")]
+    if failed:
+        result["status"] = "failed"
+        result["failed_steps"] = [{"step": s["step"], "command": s["command"], "exit_code": s["exit_code"]} for s in failed]
+    else:
+        result["status"] = "passed"
 
-layer_rules_preflight = {}
-for step in steps:
-    if step.get("step") != "paths-only":
-        continue
+    layer_rules_preflight = {}
+    for step in steps:
+        if step.get("step") != "paths-only":
+            continue
 
-    raw_output = str(step.get("raw_output", "")).strip()
-    payload = None
-    if raw_output:
-        first_line = raw_output.splitlines()[0].strip()
-        if first_line:
+        raw_output = str(step.get("raw_output", "")).splitlines()
+        payload = None
+        extra_fields = {}
+        if raw_output:
+            first_line = raw_output[0].strip()
+            if first_line:
+                try:
+                    payload = json.loads(first_line)
+                except Exception:
+                    payload = None
+            for line in raw_output[1:]:
+                if "=" not in line:
+                    continue
+                key, value = line.split("=", 1)
+                extra_fields[key.strip()] = value.strip()
+
+        if payload is None:
+            continue
+
+        source_mode = str(
+            extra_fields.get(
+                "LAYER_RULES_SOURCE_MODE",
+                payload.get("LAYER_RULES_SOURCE_MODE", payload.get("LAYER_RULES_SOURCE_KIND", "DEFAULT")),
+            )
+        ).upper()
+        inference_confidence = float(
+            extra_fields.get("LAYER_RULES_INFERENCE_CONFIDENCE", payload.get("LAYER_RULES_INFERENCE_CONFIDENCE", 0)) or 0
+        )
+        inference_rules_extracted = int(extra_fields.get("LAYER_RULES_INFERENCE_RULES_EXTRACTED", payload.get("LAYER_RULES_INFERENCE_RULES_EXTRACTED", 0)) or 0)
+        inference_fallback = str(
+            extra_fields.get("LAYER_RULES_INFERENCE_FALLBACK", payload.get("LAYER_RULES_INFERENCE_FALLBACK", "false"))
+        ).lower() in {"1", "true", "yes", "on"}
+
+        if source_mode not in {"PARSED", "INFERRED", "DEFAULT"}:
+            if source_mode == "CONTRACT_GENERATED":
+                source_mode = "PARSED"
+            else:
+                source_mode = "DEFAULT"
+
+        parse_summary = payload.get("LAYER_RULES_PARSE_SUMMARY", {})
+        if isinstance(parse_summary, str):
             try:
-                payload = json.loads(first_line)
+                parse_summary = json.loads(parse_summary)
             except Exception:
-                payload = None
+                parse_summary = {}
+        if not isinstance(parse_summary, dict):
+            parse_summary = {}
 
-    if payload is None:
+        parse_events_raw = extra_fields.get("LAYER_RULES_PARSE_EVENTS")
+        if parse_events_raw is None:
+            parse_events_raw = payload.get("LAYER_RULES_PARSE_EVENTS", [])
+
+        parse_events = parse_events_raw
+        if isinstance(parse_events, str):
+            try:
+                parse_events = json.loads(parse_events)
+            except Exception:
+                parse_events = []
+        if not isinstance(parse_events, list):
+            parse_events = []
+
+        has_layer_rules = str(payload.get("LAYER_RULES_HAS_LAYER_RULES", "false")).lower() == "true"
+        blocked = int(parse_summary.get("blocked_by_parser_missing", 0) or 0)
+        failed = int(parse_summary.get("failed", 0) or 0)
+        schema_mismatch = int(parse_summary.get("schema_mismatch", 0) or 0)
+        parse_action = "ok"
+        if strict_layer:
+            if source_mode == "PARSED":
+                if blocked > 0 or failed > 0 or schema_mismatch > 0 or not has_layer_rules:
+                    parse_action = "fail"
+            elif source_mode == "INFERRED":
+                if not has_layer_rules:
+                    parse_action = "fail"
+                elif inference_confidence < 0.5:
+                    parse_action = "fail"
+                elif inference_confidence < 0.75:
+                    parse_action = "warn"
+                elif blocked > 0 or failed > 0 or schema_mismatch > 0:
+                    parse_action = "warn"
+            elif not has_layer_rules:
+                parse_action = "fail"
+        elif source_mode == "INFERRED" and has_layer_rules and inference_confidence < 0.75:
+            parse_action = "warn"
+        elif failed > 0 or blocked > 0 or schema_mismatch > 0:
+            parse_action = "warn"
+
+        layer_kind = extra_fields.get(
+            "LAYER_RULES_SOURCE_KIND",
+            payload.get("LAYER_RULES_SOURCE_KIND", "DEFAULT"),
+        )
+        layer_file = extra_fields.get("LAYER_RULES_SOURCE_FILE", payload.get("LAYER_RULES_SOURCE_FILE", ""))
+        layer_reason = extra_fields.get(
+            "LAYER_RULES_SOURCE_REASON",
+            payload.get("LAYER_RULES_SOURCE_REASON", ""),
+        )
+        resolved_path = payload.get("LAYER_RULES_RESOLVED_PATH", "")
+
+        layer_rules_preflight = {
+            "source_kind": layer_kind,
+            "source_mode": source_mode,
+            "source_file": layer_file,
+            "source_reason": layer_reason,
+            "resolved_path": resolved_path,
+            "has_layer_rules": has_layer_rules,
+            "parse_summary": parse_summary,
+            "parse_events": parse_events,
+            "parse_events_count": len(parse_events),
+            "parse_inference_confidence": inference_confidence,
+            "parse_inference_rules_extracted": inference_rules_extracted,
+            "parse_inference_fallback": bool(inference_fallback),
+            "strict_layer": strict_layer,
+            "strict_parse_blocked": bool(strict_layer and parse_action == "fail"),
+            "parse_policy_action": parse_action,
+        }
         break
 
-    parse_summary = payload.get("LAYER_RULES_PARSE_SUMMARY", {})
-    if isinstance(parse_summary, str):
-        try:
-            parse_summary = json.loads(parse_summary)
-        except Exception:
-            parse_summary = {}
-    if not isinstance(parse_summary, dict):
-        parse_summary = {}
-
-    parse_events = payload.get("LAYER_RULES_PARSE_EVENTS", [])
-    if isinstance(parse_events, str):
-        try:
-            parse_events = json.loads(parse_events)
-        except Exception:
-            parse_events = []
-    if not isinstance(parse_events, list):
-        parse_events = []
-
-    has_layer_rules = str(payload.get("LAYER_RULES_HAS_LAYER_RULES", "false")).lower() == "true"
-    blocked = int(parse_summary.get("blocked_by_parser_missing", 0) or 0)
-    failed = int(parse_summary.get("failed", 0) or 0)
-    schema_mismatch = int(parse_summary.get("schema_mismatch", 0) or 0)
-    parse_action = "ok"
-    if strict_layer and (blocked > 0 or failed > 0):
-        parse_action = "fail"
-    elif failed > 0 or blocked > 0 or schema_mismatch > 0:
-        parse_action = "warn"
-
-    layer_rules_preflight = {
-        "source_kind": payload.get("LAYER_RULES_SOURCE_KIND", "DEFAULT"),
-        "source_file": payload.get("LAYER_RULES_SOURCE_FILE", ""),
-        "source_reason": payload.get("LAYER_RULES_SOURCE_REASON", ""),
-        "resolved_path": payload.get("LAYER_RULES_RESOLVED_PATH", ""),
-        "has_layer_rules": has_layer_rules,
-        "parse_summary": parse_summary,
-        "parse_events": parse_events,
-        "parse_events_count": len(parse_events),
-        "strict_layer": strict_layer,
-        "strict_parse_blocked": bool(strict_layer and (blocked > 0 or failed > 0)),
-        "parse_policy_action": parse_action,
-    }
-    break
-
-if layer_rules_preflight:
-    result["layer_rules_preflight"] = layer_rules_preflight
+    if layer_rules_preflight:
+        result["layer_rules_preflight"] = layer_rules_preflight
 
 print(json.dumps(result, ensure_ascii=False, indent=2))
 sys.exit(forced_exit_code)

@@ -12,15 +12,22 @@
 - **Layer Rules Source**: {{LAYER_RULES_SOURCE}}
 - **Naming Policy Rules**: <{{NAMING_RULES}}>
 - **Layer Rules Source Kind**: {{LAYER_RULES_SOURCE_KIND}}
+- **Layer Rules Source Mode**: {{LAYER_RULES_SOURCE_MODE}}
 - **Layer Rules Source File**: {{LAYER_RULES_SOURCE_FILE}}
 - **Layer Rules Source Reason**: {{LAYER_RULES_SOURCE_REASON}}
+- **Layer Rules Inference Confidence**: {{LAYER_RULES_INFERENCE_CONFIDENCE}}
+- **Layer Rules Inference Rules Extracted**: {{LAYER_RULES_INFERENCE_RULES_EXTRACTED}}
+- **Layer Rules Inference Fallback**: {{LAYER_RULES_INFERENCE_FALLBACK}}
 - **Layer Rules Resolved Path**: {{LAYER_RULES_RESOLVED_PATH}}
 - **Layer Rules Present**: {{LAYER_RULES_HAS_LAYER_RULES}}
 - **Layer Rules Summary**:
 {{LAYER_RULES_SUMMARY}}
 
-> Use `NAMING_SOURCE_FILE` from a machine-readable `json` code block in
-> `docs/ARCHITECTURE.md`/`docs/architecture.md` or constitution.
+> `docs/ARCHITECTURE.md`는 기본 아키텍처 문서 경로입니다. 작성이 필요하면 템플릿을 바로 복사해 시작할 수 있습니다.
+> - `cp .specify/templates/architecture-template.md docs/ARCHITECTURE.md`
+> - 템플릿 기반 작성 후 strict-layer 인퍼런스 대상이 됩니다.
+> - 가능한 경우 `kind: layer_rules` YAML 블록을 추가하면 파싱 정확도가 더 올라갑니다.
+> - `NAMING_SOURCE_FILE`는 `docs/ARCHITECTURE.md` 또는 헌법 문서에서 해결됩니다.
 
 ## Summary
 

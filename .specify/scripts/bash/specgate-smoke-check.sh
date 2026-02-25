@@ -402,6 +402,13 @@ fi
 LAYER_SMOKE_ROOT="$(mktemp -d)"
 LAYER_SMOKE_FEATURE="$LAYER_SMOKE_ROOT/features/home"
 LAYER_SMOKE_OUTPUT="$(mktemp)"
+LAYER_SMOKE_SOURCE_DIR="$LAYER_SMOKE_FEATURE/docs"
+REPO_CONTRACT_BACKUP="$(mktemp)"
+if cp "$REPO_ROOT/.specify/layer_rules/contract.yaml" "$REPO_CONTRACT_BACKUP"; then
+    :
+else
+    : >"$REPO_CONTRACT_BACKUP"
+fi
 
 mkdir -p "$LAYER_SMOKE_ROOT/.specify/layer_rules"
 mkdir -p "$LAYER_SMOKE_FEATURE/docs"
@@ -416,7 +423,7 @@ layer_rules:
       - '^package:legacy/data/.*'
 EOF
 
-cat >"$LAYER_SMOKE_FEATURE/docs/ARCHITECTURE.md" <<'EOF'
+cat >"$LAYER_SMOKE_SOURCE_DIR/ARCHITECTURE.md" <<'EOF'
 # Home
 
 ```yaml
@@ -428,7 +435,7 @@ layer_rules:
 EOF
 
 if bash "$REPO_ROOT/.specify/scripts/bash/load-layer-rules.sh" \
-    --source-dir "$LAYER_SMOKE_FEATURE" \
+    --source-dir "$LAYER_SMOKE_SOURCE_DIR" \
     --repo-root "$LAYER_SMOKE_ROOT" \
     --no-write-resolved \
     --json > "$LAYER_SMOKE_OUTPUT" 2>&1; then
@@ -463,6 +470,107 @@ else
     cat "$LAYER_SMOKE_OUTPUT" >&2
 fi
 
+rm -f "$LAYER_SMOKE_ROOT/.specify/layer_rules/contract.yaml"
+
+cat >"$LAYER_SMOKE_SOURCE_DIR/ARCHITECTURE.md" <<'EOF'
+# Home
+
+## Domain layer
+
+- Do not import presentation layer.
+- Do not import data layer.
+- Do not import repository_impl.
+- Do not import ui components.
+
+## Data layer
+
+- Do not import presentation layer.
+
+## Presentation layer
+
+- Do not import data layer.
+
+EOF
+
+if bash "$REPO_ROOT/.specify/scripts/bash/load-layer-rules.sh" \
+    --source-dir "$LAYER_SMOKE_SOURCE_DIR" \
+    --repo-root "$LAYER_SMOKE_ROOT" \
+    --no-write-resolved \
+    --json > "$LAYER_SMOKE_OUTPUT" 2>&1; then
+    if python3 - "$LAYER_SMOKE_OUTPUT" <<'PY'
+import json
+import sys
+
+payload = json.loads(open(sys.argv[1], encoding="utf-8").read())
+if payload.get("source_mode") != "INFERRED":
+    raise SystemExit(f"expected source_mode=INFERRED, got {payload.get('source_mode')!r}")
+if not bool(payload.get("has_layer_rules")):
+    raise SystemExit("inference-only load-layer-rules did not resolve layer_rules")
+
+inference = payload.get("inference", {})
+confidence = float(inference.get("confidence", 0) or 0)
+if confidence < 0.75:
+    raise SystemExit(f"inference confidence too low for deterministic prose-only case: {confidence}")
+if not bool(inference.get("fallback_applied", False)):
+    raise SystemExit("inference fallback_applied flag was false")
+PY
+    then
+        pass "load-layer-rules produced deterministic inference from prose-only architecture docs"
+    else
+        fail "load-layer-rules inference smoke check failed"
+        cat "$LAYER_SMOKE_OUTPUT" >&2
+    fi
+else
+    fail "load-layer-rules inference smoke check failed to execute"
+    cat "$LAYER_SMOKE_OUTPUT" >&2
+fi
+
+LAYER_SMOKE_LOWCONF_FEATURE="$LAYER_SMOKE_ROOT/features/low-confidence"
+mkdir -p "$LAYER_SMOKE_LOWCONF_FEATURE/docs"
+cat >"$LAYER_SMOKE_LOWCONF_FEATURE/docs/ARCHITECTURE.md" <<'EOF'
+# Low confidence test
+
+## Domain layer
+
+- Do not import data layer.
+
+Use case should follow pattern {Action}UseCase.
+EOF
+
+rm -f "$REPO_ROOT/.specify/layer_rules/contract.yaml"
+
+if bash "$REPO_ROOT/.specify/scripts/bash/check-layer-compliance.sh" \
+    --feature-dir "$LAYER_SMOKE_LOWCONF_FEATURE" \
+    --strict-layer \
+    --json > "$LAYER_SMOKE_OUTPUT" 2>&1; then
+    fail "low-confidence strict-layer check unexpectedly passed"
+    cat "$LAYER_SMOKE_OUTPUT" >&2
+else
+    if python3 - "$LAYER_SMOKE_OUTPUT" <<'PY'
+import json
+import sys
+
+payload = json.load(open(sys.argv[1], encoding="utf-8"))
+if payload.get("source_mode") != "INFERRED":
+    raise SystemExit(f"expected source_mode=INFERRED, got {payload.get('source_mode')!r}")
+if payload.get("parse_policy_action") != "fail":
+    raise SystemExit(f"expected parse_policy_action='fail', got {payload.get('parse_policy_action')!r}")
+inference = payload.get("inference", {})
+if float(inference.get("confidence", 0) or 0) >= 0.5:
+    raise SystemExit(f"expected low-confidence (<0.5) strict failure, got {inference.get('confidence')!r}")
+PY
+    then
+        pass "low-confidence inference strict-layer path now fails as expected"
+    else
+        fail "low-confidence strict-layer inference smoke validation failed"
+        cat "$LAYER_SMOKE_OUTPUT" >&2
+    fi
+fi
+
+if ! cp "$REPO_CONTRACT_BACKUP" "$REPO_ROOT/.specify/layer_rules/contract.yaml"; then
+    fail "smoke setup: failed to restore repository contract after low-confidence strict-layer smoke"
+fi
+
 cat >"$LAYER_SMOKE_ROOT/.specify/layer_rules/contract.yaml" <<'EOF'
 layer_rules:
   presentation
@@ -470,7 +578,7 @@ layer_rules:
       - '^package:legacy/data/'
 EOF
 
-cat >"$LAYER_SMOKE_FEATURE/docs/ARCHITECTURE.md" <<'EOF'
+cat >"$LAYER_SMOKE_SOURCE_DIR/ARCHITECTURE.md" <<'EOF'
 # Home
 
 ```yaml
@@ -482,7 +590,7 @@ layer_rules:
 EOF
 
 if bash "$REPO_ROOT/.specify/scripts/bash/load-layer-rules.sh" \
-    --source-dir "$LAYER_SMOKE_FEATURE" \
+    --source-dir "$LAYER_SMOKE_SOURCE_DIR" \
     --repo-root "$LAYER_SMOKE_ROOT" \
     --no-write-resolved \
     --json > "$LAYER_SMOKE_OUTPUT" 2>&1; then
@@ -510,7 +618,7 @@ cat >"$LAYER_SMOKE_ROOT/.specify/layer_rules/contract.yaml" <<'EOF'
 foo: bar
 EOF
 
-cat >"$LAYER_SMOKE_FEATURE/docs/ARCHITECTURE.md" <<'EOF'
+cat >"$LAYER_SMOKE_SOURCE_DIR/ARCHITECTURE.md" <<'EOF'
 # Home
 
 ```yaml
@@ -522,7 +630,7 @@ layer_rules:
 EOF
 
 if bash "$REPO_ROOT/.specify/scripts/bash/load-layer-rules.sh" \
-    --source-dir "$LAYER_SMOKE_FEATURE" \
+    --source-dir "$LAYER_SMOKE_SOURCE_DIR" \
     --repo-root "$LAYER_SMOKE_ROOT" \
     --no-write-resolved \
     --json > "$LAYER_SMOKE_OUTPUT" 2>&1; then
@@ -555,7 +663,7 @@ cat >"$LAYER_SMOKE_ROOT/.specify/layer_rules/contract.yaml" <<'EOF'
 'foo': bar
 EOF
 
-cat >"$LAYER_SMOKE_FEATURE/docs/ARCHITECTURE.md" <<'EOF'
+cat >"$LAYER_SMOKE_SOURCE_DIR/ARCHITECTURE.md" <<'EOF'
 # Home
 
 ```yaml
@@ -567,7 +675,7 @@ layer_rules:
 EOF
 
 if bash "$REPO_ROOT/.specify/scripts/bash/load-layer-rules.sh" \
-    --source-dir "$LAYER_SMOKE_FEATURE" \
+    --source-dir "$LAYER_SMOKE_SOURCE_DIR" \
     --repo-root "$LAYER_SMOKE_ROOT" \
     --no-write-resolved \
     --json > "$LAYER_SMOKE_OUTPUT" 2>&1; then
@@ -601,6 +709,7 @@ else
 fi
 
 LAYER_SMOKE_SEQUENCE_FEATURE="$LAYER_SMOKE_ROOT/features/workflow-sequence"
+LAYER_SMOKE_SEQUENCE_CONTRACT_BACKUP="$(mktemp)"
 mkdir -p "$LAYER_SMOKE_SEQUENCE_FEATURE/docs"
 cat >"$LAYER_SMOKE_SEQUENCE_FEATURE/docs/ARCHITECTURE.md" <<'EOF'
 # Sequence
@@ -616,8 +725,7 @@ cat >"$LAYER_SMOKE_SEQUENCE_FEATURE/docs/spec.md" <<'EOF'
 # Sequence feature
 EOF
 
-LAYER_SMOKE_CONTRACT_BACKUP="$(mktemp)"
-if cp "$REPO_ROOT/.specify/layer_rules/contract.yaml" "$LAYER_SMOKE_CONTRACT_BACKUP"; then
+if cp "$REPO_ROOT/.specify/layer_rules/contract.yaml" "$LAYER_SMOKE_SEQUENCE_CONTRACT_BACKUP"; then
     cat >"$REPO_ROOT/.specify/layer_rules/contract.yaml" <<'EOF'
 layer_rules
   presentation:
@@ -667,14 +775,14 @@ PY
         fi
     fi
 
-    if ! cp "$LAYER_SMOKE_CONTRACT_BACKUP" "$REPO_ROOT/.specify/layer_rules/contract.yaml"; then
+    if ! cp "$LAYER_SMOKE_SEQUENCE_CONTRACT_BACKUP" "$REPO_ROOT/.specify/layer_rules/contract.yaml"; then
         fail "failed to restore layer contract.yaml after strict-mode sequence smoke check"
     fi
 else
     fail "could not backup layer contract.yaml for strict-mode sequence smoke check"
 fi
 
-rm -f "$LAYER_SMOKE_CONTRACT_BACKUP"
+rm -f "$LAYER_SMOKE_SEQUENCE_CONTRACT_BACKUP"
 
 if bash "$REPO_ROOT/.specify/scripts/bash/run-feature-workflow-sequence.sh" \
     --feature-dir "$LAYER_SMOKE_SEQUENCE_FEATURE" \
@@ -729,6 +837,8 @@ else
 fi
 
 rm -f "$LAYER_SMOKE_OUTPUT"
+rm -f "$LAYER_SMOKE_SEQUENCE_CONTRACT_BACKUP"
+rm -f "$REPO_CONTRACT_BACKUP"
 rm -rf "$LAYER_SMOKE_ROOT"
 
 if [[ "$FAILED" -gt 0 ]]; then

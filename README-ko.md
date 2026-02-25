@@ -31,7 +31,7 @@ Claude, OpenCode, Codex에서 사용할 수 있는 명령과 스크립트를 제
   - 소비자 프로젝트에서 `/feature-set` 실행 시 생성됩니다.
   - 패키지 배포본에는 포함하지 않습니다.
 
-## 1) 초보자용 빠른 설치 (권장)
+## 1.2) 초보자용 빠른 설치 (권장)
 
 ### 옵션 A) 단일 에이전트 설치
 
@@ -126,6 +126,95 @@ bash /path/to/specgate/install.sh --preset claude --prefix .
 선택한 에이전트의 폴더가 보이면 설치가 완료된 것입니다.
 Codex는 각 워크플로우를 `.codex/skills/specgate/<workflow>/SKILL.md`로 직접 실행합니다.
 워크플로우 진행 중 사용자 입력이 필요하면 `AskUserQuestion`이 아닌 채팅에서 직접 질문하고 답변을 기다리세요.
+
+## 1.5) 아키텍처 문서 기반 레이어 규칙 자동 추론 (inference-first)
+
+JSON/YAML 블록이 없어도 사람이 읽기 쉬운 아키텍처 문서만으로 레이어 정책을 생성할 수 있습니다.
+
+```bash
+cp docs/architecture-template.md "<abs-feature-path>/docs/ARCHITECTURE.md"
+bash .specify/scripts/bash/load-layer-rules.sh --source-dir "<abs-feature-path>/docs" --repo-root . --write-contract --json
+```
+
+권장 흐름:
+
+- `docs/ARCHITECTURE.md`는 Prose 중심으로 유지합니다.
+- 필요할 때만 `layer_rules` 코드 블록(` ```layer_rules`)을 추가합니다(있으면 우선 파싱).
+- `load-layer-rules.sh` 실행 결과:
+  - 파싱이 실패하면 `source_mode=INFERRED`.
+  - `source_kind=INFERRED`.
+  - `inference.confidence` 및 `inference.evidence`가 JSON에 기록됩니다.
+- strict 동작 가이드:
+  - `confidence >= 0.75` : 통과(추가 경고 없음)
+  - `0.5 ~ 0.75` : 경고와 함께 진행
+  - `< 0.5` : strict 모드에서 실패 가능성
+
+### 1.5.0) 기존 `ARCHITECTURE.md`를 템플릿 대응형으로 변환하는 방법
+
+기존 문서를 통째로 버리지 않고도 템플릿 신호 포맷에 맞춰 보강할 수 있습니다.
+
+1) 원본 백업 먼저 생성
+```bash
+cp "<feature-path>/docs/ARCHITECTURE.md" "<feature-path>/docs/ARCHITECTURE.md.bak"
+```
+
+2) 아래 핵심 섹션을 정렬/보강
+- `## Presentation` 섹션에 `- Do not import Data layer types in Presentation.` 추가
+- `## Domain` 섹션에 `- Do not import Presentation.` 또는 `- Do not import Data layer types in Domain.` 추가
+- `## Data` 섹션에 `- Do not import Presentation.` 추가
+- `Errors`/`Behavior` 항목은 문장으로 보강 (`StateError` 금지, use case return type 명시, dispatch-only 원칙 등)
+
+3) 선택: machine-readable 블록 추가
+```layer_rules
+kind: layer_rules
+version: "1"
+layer_rules:
+  domain:
+    forbid_import_patterns:
+      - "^package:.*\\/presentation\\/"
+      - "^package:.*\\/data\\/"
+  data:
+    forbid_import_patterns:
+      - "^package:.*\\/presentation\\/"
+  presentation:
+    forbid_import_patterns:
+      - "^package:.*\\/data\\/"
+```
+
+4) 즉시 검증
+```bash
+bash .specify/scripts/bash/load-layer-rules.sh \
+  --source-dir "<feature-path>/docs" \
+  --repo-root . \
+  --write-contract \
+  --json
+```
+
+5) JSON에서 확인
+- 기존 블록이 없으면 `source_mode=INFERRED`, 있으면 `PARSED`
+- `inference.confidence`는 가능하면 `0.75` 이상
+- `inference.evidence`에 layer/import/명명/행동 관련 근거가 있어야 함
+- `policy.layer_rules`가 비어있지 않은지 확인
+
+상세 체크리스트는 `docs/architecture-template.md`에 동일하게 정리되어 있습니다.
+
+참고:
+
+- 사용자 템플릿: [`docs/architecture-template.md`](docs/architecture-template.md)
+- 런타임 템플릿: [`.specify/templates/architecture-template.md`](.specify/templates/architecture-template.md)
+- 상세 가이드: [docs/SPECGATE.md](docs/SPECGATE.md)
+
+### 1.5.1) 운영 전 검증 가이드
+
+- 인퍼런스/strict 모드 스모크 검증:
+  ```bash
+  bash .specify/scripts/bash/specgate-smoke-check.sh
+  ```
+- 배포 전 추천 점검:
+  - `bash .specify/scripts/bash/load-layer-rules.sh --source-dir <feature-path>/docs --repo-root . --write-contract --json`
+  - `bash .specify/scripts/bash/check-layer-compliance.sh --feature-dir <feature-path> --strict-layer --json`
+  - `bash .specify/scripts/bash/run-feature-workflow-sequence.sh --feature-dir <feature-path> --strict-layer --json`
+- 2026-02-25 기준 스모크 테스트 통과(프로즈-only 문서 인퍼런스 confidence/evidence 메타데이터 포함).
 
 ## 2) 고급: 에이전트별 사용법 참조
 

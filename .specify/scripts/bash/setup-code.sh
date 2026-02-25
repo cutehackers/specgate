@@ -51,8 +51,12 @@ if [[ ! -f "$CODE_DOC" && -f "$TEMPLATE" ]]; then
             "$naming_source_value" \
             "$NAMING_POLICY_JSON" \
             "$LAYER_RULES_SOURCE_KIND" \
+            "$LAYER_RULES_SOURCE_MODE" \
             "$LAYER_RULES_SOURCE_FILE" \
             "$LAYER_RULES_SOURCE_REASON" \
+            "$LAYER_RULES_INFERENCE_CONFIDENCE" \
+            "$LAYER_RULES_INFERENCE_RULES_EXTRACTED" \
+            "$LAYER_RULES_INFERENCE_FALLBACK" \
             "$LAYER_RULES_POLICY_JSON" \
             "$LAYER_RULES_RESOLVED_PATH" \
             "$LAYER_RULES_HAS_LAYER_RULES" \
@@ -72,15 +76,25 @@ except Exception:
     raw_rules = {}
 
 layer_rules_source_kind = sys.argv[4] if len(sys.argv) > 4 else "DEFAULT"
-layer_rules_source_file = sys.argv[5] if len(sys.argv) > 5 else ""
-layer_rules_source_reason = sys.argv[6] if len(sys.argv) > 6 else ""
+layer_rules_source_mode = sys.argv[5] if len(sys.argv) > 5 else layer_rules_source_kind
+layer_rules_source_file = sys.argv[6] if len(sys.argv) > 6 else ""
+layer_rules_source_reason = sys.argv[7] if len(sys.argv) > 7 else ""
 try:
-    layer_rules_policy = json.loads(sys.argv[7]) if len(sys.argv) > 7 and sys.argv[7] else {}
+    inference_confidence = float(sys.argv[8] if len(sys.argv) > 8 else 0.0)
+except Exception:
+    inference_confidence = 0.0
+try:
+    inference_rules_extracted = int(sys.argv[9] if len(sys.argv) > 9 else 0)
+except Exception:
+    inference_rules_extracted = 0
+inference_fallback_applied = parse_bool(sys.argv[10]) if len(sys.argv) > 10 else False
+try:
+    layer_rules_policy = json.loads(sys.argv[11]) if len(sys.argv) > 11 and sys.argv[11] else {}
 except Exception:
     layer_rules_policy = {}
 
-layer_rules_resolved_path = sys.argv[8] if len(sys.argv) > 8 else ""
-layer_rules_has_layer_rules = (sys.argv[9].lower() == "true") if len(sys.argv) > 9 else False
+layer_rules_resolved_path = sys.argv[12] if len(sys.argv) > 12 else ""
+layer_rules_has_layer_rules = (sys.argv[13].lower() == "true") if len(sys.argv) > 13 else False
 
 if not isinstance(layer_rules_policy, dict):
     layer_rules_policy = {}
@@ -230,6 +244,10 @@ text = text.replace("{{PROVIDER_SUFFIX}}", provider_suffix)
 text = text.replace("{{LAYER_RULES_SOURCE_KIND}}", layer_rules_source_kind)
 text = text.replace("{{LAYER_RULES_SOURCE_FILE}}", layer_rules_source_file)
 text = text.replace("{{LAYER_RULES_SOURCE_REASON}}", layer_rules_source_reason)
+text = text.replace("{{LAYER_RULES_SOURCE_MODE}}", layer_rules_source_mode)
+text = text.replace("{{LAYER_RULES_INFERENCE_CONFIDENCE}}", f"{inference_confidence:.2f}")
+text = text.replace("{{LAYER_RULES_INFERENCE_RULES_EXTRACTED}}", str(inference_rules_extracted))
+text = text.replace("{{LAYER_RULES_INFERENCE_FALLBACK}}", str(bool(inference_fallback_applied)).lower())
 text = text.replace("{{LAYER_RULES_RESOLVED_PATH}}", layer_rules_resolved_path)
 text = text.replace(
     "{{LAYER_RULES_HAS_LAYER_RULES}}", "true" if layer_rules_has_layer_rules else "false"
@@ -249,8 +267,9 @@ elif [[ ! -f "$CODE_DOC" ]]; then
 fi
 
 if $JSON_MODE; then
-    printf '{"FEATURE_SPEC":"%s","CODE_DOC":"%s","FEATURE_DIR":"%s","FEATURE_DOCS_DIR":"%s","HAS_GIT":"%s","NAMING_SOURCE_KIND":"%s","NAMING_SOURCE_FILE":"%s","NAMING_SOURCE_REASON":"%s","LAYER_RULES_SOURCE_KIND":"%s","LAYER_RULES_SOURCE_FILE":"%s","LAYER_RULES_SOURCE_REASON":"%s","LAYER_RULES_POLICY_JSON":%s,"LAYER_RULES_RESOLVED_PATH":"%s","LAYER_RULES_HAS_LAYER_RULES":"%s"}\n' \
-        "$FEATURE_SPEC" "$CODE_DOC" "$FEATURE_DIR" "$FEATURE_DOCS_DIR" "$HAS_GIT" "$NAMING_SOURCE_KIND" "$NAMING_SOURCE_FILE" "$NAMING_SOURCE_REASON" "$LAYER_RULES_SOURCE_KIND" "$LAYER_RULES_SOURCE_FILE" "$LAYER_RULES_SOURCE_REASON" "$LAYER_RULES_POLICY_JSON" "$LAYER_RULES_RESOLVED_PATH" "$LAYER_RULES_HAS_LAYER_RULES"
+    printf '{"FEATURE_SPEC":"%s","CODE_DOC":"%s","FEATURE_DIR":"%s","FEATURE_DOCS_DIR":"%s","HAS_GIT":"%s","NAMING_SOURCE_KIND":"%s","NAMING_SOURCE_FILE":"%s","NAMING_SOURCE_REASON":"%s","LAYER_RULES_SOURCE_KIND":"%s","LAYER_RULES_SOURCE_MODE":"%s","LAYER_RULES_SOURCE_FILE":"%s","LAYER_RULES_SOURCE_REASON":"%s","LAYER_RULES_INFERENCE_CONFIDENCE":"%s","LAYER_RULES_INFERENCE_RULES_EXTRACTED":"%s","LAYER_RULES_INFERENCE_FALLBACK":"%s","LAYER_RULES_POLICY_JSON":%s,"LAYER_RULES_RESOLVED_PATH":"%s","LAYER_RULES_HAS_LAYER_RULES":"%s"}\n' \
+        "$FEATURE_SPEC" "$CODE_DOC" "$FEATURE_DIR" "$FEATURE_DOCS_DIR" "$HAS_GIT" "$NAMING_SOURCE_KIND" "$NAMING_SOURCE_FILE" "$NAMING_SOURCE_REASON" \
+        "$LAYER_RULES_SOURCE_KIND" "$LAYER_RULES_SOURCE_MODE" "$LAYER_RULES_SOURCE_FILE" "$LAYER_RULES_SOURCE_REASON" "$LAYER_RULES_INFERENCE_CONFIDENCE" "$LAYER_RULES_INFERENCE_RULES_EXTRACTED" "$LAYER_RULES_INFERENCE_FALLBACK" "$LAYER_RULES_POLICY_JSON" "$LAYER_RULES_RESOLVED_PATH" "$LAYER_RULES_HAS_LAYER_RULES"
 else
     echo "FEATURE_SPEC: $FEATURE_SPEC"
     echo "CODE_DOC: $CODE_DOC"
@@ -261,8 +280,12 @@ else
     echo "NAMING_SOURCE_FILE: $NAMING_SOURCE_FILE"
     echo "NAMING_SOURCE_REASON: $NAMING_SOURCE_REASON"
     echo "LAYER_RULES_SOURCE_KIND: $LAYER_RULES_SOURCE_KIND"
+    echo "LAYER_RULES_SOURCE_MODE: $LAYER_RULES_SOURCE_MODE"
     echo "LAYER_RULES_SOURCE_FILE: $LAYER_RULES_SOURCE_FILE"
     echo "LAYER_RULES_SOURCE_REASON: $LAYER_RULES_SOURCE_REASON"
+    echo "LAYER_RULES_INFERENCE_CONFIDENCE: $LAYER_RULES_INFERENCE_CONFIDENCE"
+    echo "LAYER_RULES_INFERENCE_RULES_EXTRACTED: $LAYER_RULES_INFERENCE_RULES_EXTRACTED"
+    echo "LAYER_RULES_INFERENCE_FALLBACK: $LAYER_RULES_INFERENCE_FALLBACK"
     echo "LAYER_RULES_RESOLVED_PATH: $LAYER_RULES_RESOLVED_PATH"
     echo "LAYER_RULES_HAS_LAYER_RULES: $LAYER_RULES_HAS_LAYER_RULES"
 fi
