@@ -447,7 +447,7 @@ bash .specify/scripts/bash/load-layer-rules.sh \
 
 ```bash
 bash .specify/scripts/bash/load-layer-rules.sh \
-  --source-dir "./lib/src/features/home/docs/ARCHITECTURE.md" \
+  --source-dir "./docs/ARCHITECTURE.md" \
   --write-contract \
   --force-contract \
   --json

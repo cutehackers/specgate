@@ -431,7 +431,7 @@ Direct one-line example with an explicit architecture path:
 ```bash
 # explicit feature file path example
 bash .specify/scripts/bash/load-layer-rules.sh \
-  --source-dir "./lib/src/features/home/docs/ARCHITECTURE.md" \
+  --source-dir "./docs/ARCHITECTURE.md" \
   --write-contract \
   --force-contract \
   --json
