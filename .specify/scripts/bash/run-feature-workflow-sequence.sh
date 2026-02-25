@@ -78,6 +78,8 @@ if [[ -z "$FEATURE_DIR_ARG" ]]; then
     exit 1
 fi
 
+STRICT_LAYER_FLAGS=()
+
 SCRIPT_DIR="$(CDPATH="" cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
 
@@ -93,6 +95,7 @@ LAST_PATHS_ONLY_PARSE_SUMMARY="{}"
 LAST_PATHS_ONLY_PARSE_BLOCKED=0
 LAST_PATHS_ONLY_PARSE_FAILED=0
 LAST_PATHS_ONLY_PARSE_SCHEMA_MISMATCH=0
+LAST_PATHS_ONLY_HAS_LAYER_RULES="false"
 LAST_PATHS_ONLY_PARSE_GATE_REASON=""
 LAST_PATHS_ONLY_PARSE_ACTION="ok"
 
@@ -104,21 +107,24 @@ check_paths_only_parse_gate() {
     LAST_PATHS_ONLY_PARSE_BLOCKED=0
     LAST_PATHS_ONLY_PARSE_FAILED=0
     LAST_PATHS_ONLY_PARSE_SCHEMA_MISMATCH=0
+    LAST_PATHS_ONLY_HAS_LAYER_RULES="false"
     LAST_PATHS_ONLY_PARSE_GATE_REASON=""
     LAST_PATHS_ONLY_PARSE_ACTION="ok"
 
     local metric
-    metric="$(printf '%s' "$output" | python3 - "$strict" <<'PY'
+    metric="$(CHECK_PATHS_ONLY_OUTPUT="$output" python3 - "$strict" <<'PY'
 import json
 import sys
+import os
 
-raw = sys.stdin.read().strip()
+raw = os.environ.get("CHECK_PATHS_ONLY_OUTPUT", "").strip()
 strict = (len(sys.argv) > 1 and str(sys.argv[1]).lower() == "true")
 
 print("gate_failed=0")
 print("blocked_by_parser_missing=0")
 print("parse_failed=0")
 print("schema_mismatch=0")
+print("has_layer_rules=false")
 print("parse_summary={}")
 print("parse_total=0")
 
@@ -150,26 +156,39 @@ blocked = int(summary.get("blocked_by_parser_missing", 0) or 0)
 failed = int(summary.get("failed", 0) or 0)
 schema_mismatch = int(summary.get("schema_mismatch", 0) or 0)
 total = int(summary.get("total", 0) or 0)
+has_layer_rules = str(payload.get("LAYER_RULES_HAS_LAYER_RULES", "false")).lower() in {"1", "true", "yes", "y", "on"}
 
 print(f"blocked_by_parser_missing={blocked}")
 print(f"parse_failed={failed}")
 print(f"schema_mismatch={schema_mismatch}")
 print(f"parse_total={total}")
 print("parse_summary=" + json.dumps(summary, ensure_ascii=False, separators=(",", ":")))
+print("has_layer_rules=" + ("true" if has_layer_rules else "false"))
 
-if strict and (blocked > 0 or failed > 0):
+if strict and (blocked > 0 or failed > 0 or not has_layer_rules):
     print("parse_action=fail")
+    reasons = []
+    if blocked > 0 or failed > 0:
+        reasons.append(
+            f"blocked_by_parser_missing={blocked}, parse_failed={failed}, schema_mismatch={schema_mismatch}"
+        )
+    if not has_layer_rules:
+        reasons.append("no layer_rules resolved")
+    print("reason= strict-layer parse gate failed: " + ", ".join(reasons))
 elif failed > 0 or blocked > 0 or schema_mismatch > 0:
     print("parse_action=warn")
 else:
     print("parse_action=ok")
 
-if strict and (blocked > 0 or failed > 0):
+if strict and (blocked > 0 or failed > 0 or not has_layer_rules):
     print("gate_failed=1")
-    print(
-        f"reason=strict-layer parse gate failed: "
-        f"blocked_by_parser_missing={blocked}, parse_failed={failed}, schema_mismatch={schema_mismatch}"
-    )
+    if blocked > 0 or failed > 0:
+        print(
+            f"reason=strict-layer parse gate failed: "
+            f"blocked_by_parser_missing={blocked}, parse_failed={failed}, schema_mismatch={schema_mismatch}"
+        )
+    else:
+        print("reason=strict-layer parse gate failed: no layer_rules resolved")
 PY
 )"
 
@@ -189,6 +208,9 @@ PY
                 ;;
             schema_mismatch)
                 LAST_PATHS_ONLY_PARSE_SCHEMA_MISMATCH="${value}"
+                ;;
+            has_layer_rules)
+                LAST_PATHS_ONLY_HAS_LAYER_RULES="${value}"
                 ;;
             reason)
                 LAST_PATHS_ONLY_PARSE_GATE_REASON="${value}"
@@ -275,6 +297,7 @@ run_step() {
 
         output="${output}"$'\n'"LAYER_RULES_PARSE_SUMMARY=${LAST_PATHS_ONLY_PARSE_SUMMARY}"
         output="${output}"$'\n'"LAYER_RULES_PARSE_ACTION=${LAST_PATHS_ONLY_PARSE_ACTION}"
+        output="${output}"$'\n'"LAYER_RULES_HAS_LAYER_RULES=${LAST_PATHS_ONLY_HAS_LAYER_RULES}"
         output="${output}"$'\n'"LAYER_RULES_PARSE_FAILED=${LAST_PATHS_ONLY_PARSE_FAILED}"
         output="${output}"$'\n'"LAYER_RULES_PARSE_BLOCKED=${LAST_PATHS_ONLY_PARSE_BLOCKED}"
         output="${output}"$'\n'"LAYER_RULES_PARSE_SCHEMA_MISMATCH=${LAST_PATHS_ONLY_PARSE_SCHEMA_MISMATCH}"
@@ -484,7 +507,7 @@ if ! run_or_abort "code-prerequisites" \
     "$REPO_ROOT/.specify/scripts/bash/check-code-prerequisites.sh" \
     --feature-dir "$FEATURE_DIR" \
     --json \
-    "${STRICT_LAYER_FLAGS[@]}"; then
+    "${STRICT_LAYER_FLAGS[@]+"${STRICT_LAYER_FLAGS[@]}"}"; then
     SEQUENCE_FAILED=true
     if [[ "$STOP_ON_FAIL" == true ]]; then
         if [[ "$JSON_MODE" == true ]]; then
@@ -500,7 +523,7 @@ if ! run_or_abort "implementation-quality" \
     "$REPO_ROOT/.specify/scripts/bash/check-implementation-quality.sh" \
     --feature-dir "$FEATURE_DIR" \
     --json \
-    "${STRICT_LAYER_FLAGS[@]}"; then
+    "${STRICT_LAYER_FLAGS[@]+"${STRICT_LAYER_FLAGS[@]}"}"; then
     SEQUENCE_FAILED=true
     if [[ "$STOP_ON_FAIL" == true ]]; then
         if [[ "$JSON_MODE" == true ]]; then

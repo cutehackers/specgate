@@ -362,6 +362,7 @@ resolve_layer_rules_source() {
     local resolved_output
     local layer_rules_loader
     local -a load_layer_args
+    local blocked_parser_install_hint
 
     layer_rules_loader="${SCRIPT_DIR:-$(CDPATH="" cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}/load-layer-rules.sh"
 
@@ -373,6 +374,7 @@ resolve_layer_rules_source() {
     LAYER_RULES_HAS_LAYER_RULES="false"
     LAYER_RULES_PARSE_EVENTS="[]"
     LAYER_RULES_PARSE_SUMMARY="{}"
+    LAYER_RULES_PARSE_BLOCKED_BY_PARSER="false"
 
     if [[ ! -f "$layer_rules_loader" ]]; then
         LAYER_RULES_SOURCE_REASON="Layer rules loader script is not available; skipping layer policy resolution."
@@ -417,6 +419,9 @@ print("LAYER_RULES_RESOLVED_PATH=" + payload.get("resolved_path", ""))
 print("LAYER_RULES_HAS_LAYER_RULES=" + ("true" if bool(payload.get("has_layer_rules", False)) else "false"))
 print(f"LAYER_RULES_PARSE_EVENTS={json.dumps(payload.get('parse_events', []), ensure_ascii=False, separators=(',', ':'))}")
 print(f"LAYER_RULES_PARSE_SUMMARY={json.dumps(payload.get('parse_summary', {}), ensure_ascii=False, separators=(',', ':'))}")
+parse_summary = payload.get('parse_summary', {})
+blocked = int((parse_summary or {}).get('blocked_by_parser_missing', 0) or 0)
+print(f"LAYER_RULES_PARSE_BLOCKED_BY_PARSER={'true' if blocked > 0 else 'false'}")
 
 policy = payload.get("policy", {})
 if not isinstance(policy, dict):
@@ -438,12 +443,39 @@ PY
             LAYER_RULES_POLICY_JSON=*) LAYER_RULES_POLICY_JSON="${pair#LAYER_RULES_POLICY_JSON=}" ;;
             LAYER_RULES_PARSE_EVENTS=*) LAYER_RULES_PARSE_EVENTS="${pair#LAYER_RULES_PARSE_EVENTS=}" ;;
             LAYER_RULES_PARSE_SUMMARY=*) LAYER_RULES_PARSE_SUMMARY="${pair#LAYER_RULES_PARSE_SUMMARY=}" ;;
+            LAYER_RULES_PARSE_BLOCKED_BY_PARSER=*) LAYER_RULES_PARSE_BLOCKED_BY_PARSER="${pair#LAYER_RULES_PARSE_BLOCKED_BY_PARSER=}" ;;
         esac
     done <<< "$resolved_output"
+
+    if [[ -n "$LAYER_RULES_PARSE_SUMMARY" ]]; then
+        LAYER_RULES_PARSE_BLOCKED_BY_PARSER="$(python3 - "$LAYER_RULES_PARSE_SUMMARY" <<'PY'
+import json
+import sys
+
+raw = sys.argv[1]
+try:
+    summary = json.loads(raw)
+except Exception:
+    summary = {}
+blocked = int((summary or {}).get("blocked_by_parser_missing", 0) or 0)
+print("true" if blocked > 0 else "false")
+PY
+)"
+    fi
+
+    if [[ "$LAYER_RULES_PARSE_BLOCKED_BY_PARSER" == "true" ]]; then
+        blocked_parser_install_hint="Install Python package PyYAML (recommended) or ruamel.yaml."
+    else
+        blocked_parser_install_hint=""
+    fi
 
     if [[ -z "$LAYER_RULES_SOURCE_KIND" ]]; then
         LAYER_RULES_SOURCE_KIND="DEFAULT"
         LAYER_RULES_SOURCE_REASON="Resolved layer metadata could not be parsed from loader output; using defaults."
+    elif [[ "$LAYER_RULES_PARSE_BLOCKED_BY_PARSER" == "true" && "$LAYER_RULES_SOURCE_KIND" != "DEFAULT" ]]; then
+        LAYER_RULES_SOURCE_REASON="${LAYER_RULES_SOURCE_REASON} (parser dependency missing: install PyYAML/ruamel.yaml; example: python3 -m pip install PyYAML)"
+    elif [[ "$LAYER_RULES_PARSE_BLOCKED_BY_PARSER" == "true" && "$LAYER_RULES_SOURCE_KIND" == "DEFAULT" ]]; then
+        LAYER_RULES_SOURCE_REASON="No layer_rules source resolved because Python YAML parser is unavailable. ${blocked_parser_install_hint}"
     fi
 }
 
@@ -506,6 +538,7 @@ get_feature_paths() {
     printf 'LAYER_RULES_POLICY_JSON=%q\n' "$LAYER_RULES_POLICY_JSON"
     printf 'LAYER_RULES_PARSE_EVENTS=%q\n' "$LAYER_RULES_PARSE_EVENTS"
     printf 'LAYER_RULES_PARSE_SUMMARY=%q\n' "$LAYER_RULES_PARSE_SUMMARY"
+    printf 'LAYER_RULES_PARSE_BLOCKED_BY_PARSER=%q\n' "$LAYER_RULES_PARSE_BLOCKED_BY_PARSER"
 }
 
 check_file() { [[ -f "$1" ]] && echo "  ✓ $2" || echo "  ✗ $2"; }

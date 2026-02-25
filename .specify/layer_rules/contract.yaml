@@ -1,42 +1,38 @@
-version: "1"
 kind: layer_rules
-description: >
-  Default fallback contract for this SpecGate installation.
-  Project teams should override this via docs/ARCHITECTURE.md or
-  .specify/layer_rules/overrides/<feature-id>.yaml before enabling strict mode.
-
+version: '1'
 naming:
-  entity: "{Name}Entity"
-  dto: "{Name}Dto"
-  use_case: "{Action}UseCase"
-  repository: "{Feature}Repository"
-  repository_impl: "{Feature}RepositoryImpl"
-  event: "{Feature}{Action}Event"
-  controller: "{Feature}Controller"
-  data_source: "{Feature}{Type}DataSource"
-  provider: "{featureName}{Type}Provider"
-
+  entity: '{Name}Entity'
+  dto: '{Name}Dto'
+  use_case: '{Action}UseCase'
+  repository: '{Feature}Repository'
+  repository_impl: '{Feature}RepositoryImpl'
+  event: '{Feature}{Action}Event'
+  controller: '{Feature}Controller'
+  data_source: '{Feature}{Type}DataSource'
+  provider: '{featureName}{Type}Provider'
 layer_rules:
   domain:
     forbid_import_patterns:
-      - "^package:.*\\/data\\/"
-      - "^package:.*\\/presentation\\/"
+    - ^package:.*/data/
+    - ^package:.*/presentation/
+    - ^package:.*/ui/
   data:
     forbid_import_patterns:
-      - "^package:.*\\/presentation\\/"
+    - ^package:.*/presentation/
   presentation:
     forbid_import_patterns:
-      - "^package:.*\\/data\\/.+\\/(dto|datasource|repository_impl)"
-      - "^package:.*\\/core\\/.+\\/(dto|entity)"
-
+    - ^package:.*/data/.+/(dto|data_source|datasource|repository_impl)
+    - ^package:.*/domain/.+/(dto|entity)
 errors:
   policy:
     domain_layer:
       forbid_exceptions:
-        - "StateError"
-        - "Exception"
+      - StateError
+      - Exception
       require_result_type: true
-
 behavior:
   use_case:
     allow_direct_repository_implementation_use: false
+description: 'Marker-based architecture contract for this project.
+
+  This policy is extracted by load-layer-rules.sh using layer-rules markers.'

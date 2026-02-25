@@ -130,7 +130,13 @@ Load + merge + optionally write contract for feature-level governance.
 bash .specify/scripts/bash/load-layer-rules.sh --source-dir "<abs-feature-path>" --repo-root . --json
 ```
 
-`load-layer-rules.sh`는 YAML 문서 파싱 시 `PyYAML`(권장) 또는 `ruamel.yaml`이 필요합니다. 두 파서가 모두 없으면 `errors`가 발생하고 정책은 신뢰성 있게 적용되지 않습니다.
+`load-layer-rules.sh`는 YAML 문서 파싱 시 `PyYAML`(권장) 또는 `ruamel.yaml`이 필요합니다. 두 파서가 모두 없으면 `errors`가 발생하고 정책은 신뢰성 있게 적용되지 않습니다. 설치는 아래 중 하나로 진행합니다.
+
+```bash
+python3 -m pip install PyYAML
+# 또는
+python3 -m pip install ruamel.yaml
+```
 
 Compatibility form:
 
@@ -142,10 +148,43 @@ bash .specify/scripts/bash/load-layer-rules.sh --feature-dir "<abs-feature-path>
 
 - `.specify/layer_rules/contract.yaml` (global baseline)
 - `.specify/layer_rules/overrides/<feature-id>.yaml` (feature override, if exists)
-- `<feature>/docs/ARCHITECTURE.md`
-- `<feature>/docs/architecture.md`
+- `<feature>/docs/ARCHITECTURE.md` (canonical machine policy source)
 - `<feature>/docs/constitution.md`
 - `<feature>/constitution.md`
+
+For deterministic extraction, place the machine-readable layer policy in this one block:
+
+```layer_rules
+kind: layer_rules
+version: "1"
+naming:
+  entity: "{Name}Entity"
+  dto: "{Name}Dto"
+  use_case: "{Action}UseCase"
+  repository: "{Feature}Repository"
+  repository_impl: "{Feature}RepositoryImpl"
+  event: "{Feature}{Action}Event"
+  controller: "{Feature}Controller"
+  data_source: "{Feature}{Type}DataSource"
+  provider: "{featureName}{Type}Provider"
+
+layer_rules:
+  domain: {}
+  data: {}
+  presentation: {}
+
+errors:
+  policy:
+    domain_layer:
+      forbid_exceptions: []
+      require_result_type: true
+
+behavior:
+  use_case:
+    allow_direct_repository_implementation_use: false
+```
+
+Or use explicit markers: `<!-- layer-rules:start --> ... <!-- layer-rules:end -->`.
 
 ##### `--source-dir` scanning policy
 
@@ -217,7 +256,7 @@ From `--json` output, confirm:
   - `YAML_PARSE_ERROR`
   - `JSON_PARSE_ERROR`
   - `POLICY_SCHEMA_MISSING`
-  - `JSON_FULL_TEXT_PARSE_ERROR`
+  - `JSON_FULL_TEXT_PARSE_ERROR` (legacy; not emitted for Markdown in the current parser flow)
 - In strict-mode JSON output, workflow summary now includes `layer_rules_preflight` with `source_*`, `resolved_path`, `parse_summary`, and `parse_events`.
 
 ### 4.5 Strict and relaxed execution
@@ -229,7 +268,7 @@ Strict mode (hard fail):
 ```bash
 bash .specify/scripts/bash/run-feature-workflow-sequence.sh --feature-dir "<abs-feature-path>" --strict-layer --strict-naming --json
 ```
-In strict mode, workflow fails when parser metadata indicates malformed/ambiguous YAML/JSON input (`parse_summary.failed > 0`) or unavailable parser dependency (`parse_summary.blocked_by_parser_missing > 0`).
+In strict mode, workflow fails when parser metadata indicates malformed/ambiguous policy input (`parse_summary.failed > 0`), unavailable parser dependency (`parse_summary.blocked_by_parser_missing > 0`), or no resolved `layer_rules` section (`LAYER_RULES_HAS_LAYER_RULES=false`).
 
 Relaxed mode (warn/report only):
 

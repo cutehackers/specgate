@@ -380,6 +380,14 @@ bash .specify/scripts/bash/load-layer-rules.sh --source-dir "<feature-path-or-fi
 
 `load-layer-rules.sh`는 YAML 블록 파싱을 위해 `PyYAML`(권장) 또는 `ruamel.yaml`이 Python 환경에 설치되어 있어야 하며, 둘 다 없으면 정책 파싱이 비신뢰 상태로 표시됩니다.
 
+초기 실행 전 설치:
+
+```bash
+python3 -m pip install PyYAML
+# 또는
+python3 -m pip install ruamel.yaml
+```
+
 ### `load-layer-rules.sh` 사용법
 
 이 명령은 아래 소스의 layer 정책을 병합해 해석합니다.

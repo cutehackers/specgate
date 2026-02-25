@@ -18,7 +18,6 @@ Usage: load-layer-rules.sh --source-dir <path> [--feature-id <id>] [--repo-root 
   --source-dir <path>       Feature policy source file or folder (supports relative path)
                            Supports fixed files under this directory or a direct file:
                            - docs/ARCHITECTURE.md
-                           - docs/architecture.md
                            - docs/constitution.md
                            - constitution.md
                            - any readable file containing parseable policy payload
@@ -374,6 +373,39 @@ def parse_json_blocks(content: str):
         blocks.append(match.group(2))
     return blocks
 
+
+def parse_layer_rules_marked_blocks(content: str):
+    blocks = []
+    marker_re = re.compile(
+        r"(?ms)<!--\s*layer-rules:start\s*-->(.*?)<!--\s*layer-rules:end\s*-->",
+        re.IGNORECASE,
+    )
+    for index, match in enumerate(marker_re.finditer(content)):
+        body = (match.group(1) or "").strip()
+        if body.startswith("```"):
+            body = re.sub(
+                r"(?ms)^```[A-Za-z0-9_-]+\s*\n|^\s*```$",
+                "",
+                body,
+            ).strip()
+        if body:
+            blocks.append(("layer_rules_marker", f"marker:{index}", body))
+    return blocks
+
+
+def parse_layer_rules_fenced_blocks(content: str):
+    blocks = []
+    for index, match in enumerate(
+        re.finditer(
+            r"(?ms)(^|\n)```(?:layer_rules|layer-rules)\s*\n(.*?)\n```",
+            content,
+        )
+    ):
+        body = (match.group(2) or "").strip()
+        if body:
+            blocks.append(("layer_rules_fence", f"fence:{index}", body))
+    return blocks
+
 def parse_yaml_with_library(text: str, source: str, candidate_type: str, candidate_index: str):
     parse_errors = []
     _append_parser_event(
@@ -663,14 +695,23 @@ def extract_yaml_or_json(path: Path):
     text_candidates = []
     if path.suffix.lower() in {".yml", ".yaml"}:
         text_candidates.append(("yaml_file", "full", raw))
-    text_candidates.extend(
-        ("yaml_block", f"block:{index}", block)
-        for index, block in enumerate(parse_yaml_blocks(raw))
-    )
-    text_candidates.extend(
-        ("json_block", f"block:{index}", block)
-        for index, block in enumerate(parse_json_blocks(raw))
-    )
+    elif path.suffix.lower() == ".json":
+        text_candidates.append(("json_file", "full", raw))
+
+    explicit_markers = parse_layer_rules_marked_blocks(raw)
+    explicit_candidates = explicit_markers.copy()
+
+    if explicit_candidates:
+        text_candidates.extend(explicit_candidates)
+    else:
+        text_candidates.extend(
+            ("yaml_block", f"block:{index}", block)
+            for index, block in enumerate(parse_yaml_blocks(raw))
+        )
+        text_candidates.extend(
+            ("json_block", f"block:{index}", block)
+            for index, block in enumerate(parse_json_blocks(raw))
+        )
 
     for candidate_type, candidate_index, candidate in text_candidates:
         parsed = parse_layer_rules(candidate, str(path), candidate_type, candidate_index)
@@ -702,40 +743,6 @@ def extract_yaml_or_json(path: Path):
             status="failed",
             code="POLICY_SCHEMA_MISSING",
             message=f"{path}: candidate payload parsed as JSON but did not include policy keys.",
-        )
-
-    try:
-        parsed = json.loads(raw)
-    except Exception as err:
-        _append_parser_event(
-            source=str(path),
-            parser="json",
-            candidate_type="full_text",
-            candidate_index="0",
-            status="failed",
-            code="JSON_FULL_TEXT_PARSE_ERROR",
-            message=f"{path}: full-text JSON parse failed ({err}).",
-        )
-    else:
-        if is_valid_policy(parsed):
-            _append_parser_event(
-                source=str(path),
-                parser="json",
-                candidate_type="full_text",
-                candidate_index="0",
-                status="success",
-                code="JSON_FULL_TEXT_VALID_POLICY_FOUND",
-                message=f"{path}: full-text JSON payload contains expected policy keys.",
-            )
-            return parsed
-        _append_parser_event(
-            source=str(path),
-            parser="json",
-            candidate_type="full_text",
-            candidate_index="0",
-            status="failed",
-            code="JSON_FULL_TEXT_SCHEMA_MISSING",
-            message=f"{path}: full-text JSON payload parsed but did not include policy keys.",
         )
 
     _append_parser_event(
@@ -782,6 +789,15 @@ feature_arch_lower = feature_path / "docs" / "architecture.md"
 feature_cons = feature_path / "docs" / "constitution.md"
 feature_cons_root = feature_path / "constitution.md"
 
+def choose_existing_path(*paths):
+    for candidate in paths:
+        if candidate.is_file():
+            return candidate
+    return None
+
+feature_arch = choose_existing_path(feature_arch_main, feature_arch_lower)
+feature_const = choose_existing_path(feature_cons, feature_cons_root)
+
 candidate_sources = []
 if explicit_source_file:
     candidate_sources.append(
@@ -790,11 +806,12 @@ if explicit_source_file:
 candidate_sources.extend([
     (contract_path, "CONTRACT", "Repository default contract"),
     (override_path, "OVERRIDE", "Feature override in .specify/layer_rules/overrides"),
-    (feature_cons, "CONSTITUTION", "Feature constitution"),
-    (feature_cons_root, "CONSTITUTION", "Feature constitution"),
-    (feature_arch_main, "ARCHITECTURE", "Feature architecture"),
-    (feature_arch_lower, "ARCHITECTURE", "Feature architecture"),
 ])
+
+if feature_const is not None:
+    candidate_sources.append((feature_const, "CONSTITUTION", "Feature constitution"))
+if feature_arch is not None:
+    candidate_sources.append((feature_arch, "ARCHITECTURE", "Feature architecture"))
 
 policy = {}
 applied_sources = []

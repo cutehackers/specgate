@@ -381,6 +381,14 @@ bash .specify/scripts/bash/load-layer-rules.sh --source-dir "<feature-path-or-fi
 
 Parser dependency: `load-layer-rules.sh` requires `PyYAML` (recommended) or `ruamel.yaml` in the Python environment to parse YAML blocks deterministically. Without one of these, parsing errors are returned and policy resolution is treated as unreliable.
 
+Install one of them before first strict run:
+
+```bash
+python3 -m pip install PyYAML
+# or
+python3 -m pip install ruamel.yaml
+```
+
 ### `load-layer-rules.sh` usage
 
 This command resolves merged layer policy from:
