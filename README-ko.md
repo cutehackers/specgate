@@ -375,7 +375,7 @@ bash .specify/scripts/bash/bootstrap-layer-rules.sh --repo-root . --feature-dir 
 게이트 실행 전에 적용 정책을 먼저 확인하세요.
 
 ```bash
-bash .specify/scripts/bash/load-layer-rules.sh --source-dir "<abs-feature-path>" --repo-root . --json
+bash .specify/scripts/bash/load-layer-rules.sh --source-dir "<feature-path-or-file>" --json
 ```
 
 `load-layer-rules.sh`는 YAML 블록 파싱을 위해 `PyYAML`(권장) 또는 `ruamel.yaml`이 Python 환경에 설치되어 있어야 하며, 둘 다 없으면 정책 파싱이 비신뢰 상태로 표시됩니다.
@@ -391,33 +391,36 @@ bash .specify/scripts/bash/load-layer-rules.sh --source-dir "<abs-feature-path>"
 - `<feature>/docs/constitution.md`
 - `<feature>/constitution.md`
 
-`--source-dir`는 임의 경로를 재귀 탐색하지 않고, 입력 폴더 하위에서 아래 고정 파일만 확인합니다.
+`--source-dir`는 폴더와 파일 경로를 모두 받을 수 있습니다.
+
+폴더를 넘기는 경우 아래 고정 파일만 확인하며 재귀 탐색하지 않습니다.
 
 - `<source-dir>/docs/ARCHITECTURE.md`
 - `<source-dir>/docs/architecture.md`
 - `<source-dir>/docs/constitution.md`
 - `<source-dir>/constitution.md`
 
+파일을 넘기는 경우 해당 파일을 정책 소스로 직접 파싱합니다(예: `docs/ARCHITECTURE.md`).
+
+`--repo-root`는 생략 가능하며, 생략 시 프로젝트 루트를 기본값으로 사용합니다.
+
 `--source-dir`는 `architecture.md`/`constitution.md`를 읽을 정책 소스 경로이고, `--feature-id`는 오버라이드/캐시 파일명(`.specify/layer_rules/overrides/<feature-id>.yaml`, `.specify/layer_rules/resolved/<feature-id>.json`)에만 사용됩니다.
 
 ```bash
 # 병합 정책 확인
 bash .specify/scripts/bash/load-layer-rules.sh \
-  --source-dir "<abs-feature-path>" \
-  --repo-root . \
+  --source-dir "<feature-path-or-file>" \
   --json
 
 # 정책을 contract.yaml로 동기화
 bash .specify/scripts/bash/load-layer-rules.sh \
-  --source-dir "<abs-feature-path>" \
-  --repo-root . \
+  --source-dir "<feature-path-or-file>" \
   --write-contract \
   --json
 
 # 기존 contract.yaml 강제 덮어쓰기
 bash .specify/scripts/bash/load-layer-rules.sh \
-  --source-dir "<abs-feature-path>" \
-  --repo-root . \
+  --source-dir "<feature-path-or-file>" \
   --write-contract \
   --force-contract \
   --json
@@ -427,8 +430,7 @@ bash .specify/scripts/bash/load-layer-rules.sh \
 
 ```bash
 bash .specify/scripts/bash/load-layer-rules.sh \
-  --source-dir "<abs-feature-path>" \
-  --repo-root . \
+  --source-dir "<feature-path-or-file>" \
   --write-contract \
   --json
 ```
@@ -437,8 +439,7 @@ bash .specify/scripts/bash/load-layer-rules.sh \
 
 ```bash
 bash .specify/scripts/bash/load-layer-rules.sh \
-  --source-dir "/Users/me/workspace/app/lib/src/features/home" \
-  --repo-root "/Users/me/workspace/app" \
+  --source-dir "./lib/src/features/home/docs/ARCHITECTURE.md" \
   --write-contract \
   --force-contract \
   --json
@@ -447,7 +448,7 @@ bash .specify/scripts/bash/load-layer-rules.sh \
 기존 문법(`--feature-dir`)도 호환되어 그대로 사용할 수 있습니다.
 
 ```bash
-bash .specify/scripts/bash/load-layer-rules.sh --feature-dir "<abs-feature-path>" --repo-root . --json
+bash .specify/scripts/bash/load-layer-rules.sh --feature-dir "<feature-path-or-file>" --json
 ```
 
 `contract.yaml`이 이미 존재하면 교체하려면 `--force-contract`를 추가하세요.

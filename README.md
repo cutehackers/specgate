@@ -376,7 +376,7 @@ bash .specify/scripts/bash/bootstrap-layer-rules.sh --repo-root . --feature-dir 
 Verify the effective policy before running gates:
 
 ```bash
-bash .specify/scripts/bash/load-layer-rules.sh --source-dir "<abs-feature-path>" --repo-root . --json
+bash .specify/scripts/bash/load-layer-rules.sh --source-dir "<feature-path-or-file>" --json
 ```
 
 Parser dependency: `load-layer-rules.sh` requires `PyYAML` (recommended) or `ruamel.yaml` in the Python environment to parse YAML blocks deterministically. Without one of these, parsing errors are returned and policy resolution is treated as unreliable.
@@ -392,32 +392,38 @@ This command resolves merged layer policy from:
 - `<feature>/docs/constitution.md`
 - `<feature>/constitution.md`
 
-`--source-dir` checks only these files in that directory (no recursive scan):
+`--source-dir` accepts either a feature folder or a direct source file path:
+
+- when a directory is provided, it checks the following files in that directory (no recursive scan):
 
 - `<source-dir>/docs/ARCHITECTURE.md`
 - `<source-dir>/docs/architecture.md`
 - `<source-dir>/docs/constitution.md`
 - `<source-dir>/constitution.md`
 
+- when a file is provided, that file is treated as an explicit policy source and parsed directly (for example: `docs/ARCHITECTURE.md`).
+
+If `--repo-root` is omitted, it defaults to the project root.
+
 Use cases:
 
 ```bash
 # only inspect merged policy
-bash .specify/scripts/bash/load-layer-rules.sh --source-dir "<abs-feature-path>" --repo-root . --json
+bash .specify/scripts/bash/load-layer-rules.sh --source-dir "<feature-path-or-file>" --json
 
 # synchronize to contract.yaml
-bash .specify/scripts/bash/load-layer-rules.sh --source-dir "<abs-feature-path>" --repo-root . --write-contract --json
+bash .specify/scripts/bash/load-layer-rules.sh --source-dir "<feature-path-or-file>" --write-contract --json
 
 # force overwrite contract.yaml
-bash .specify/scripts/bash/load-layer-rules.sh --source-dir "<abs-feature-path>" --repo-root . --write-contract --force-contract --json
+bash .specify/scripts/bash/load-layer-rules.sh --source-dir "<feature-path-or-file>" --write-contract --force-contract --json
 ```
 
 Direct one-line example with an explicit architecture path:
 
 ```bash
+# explicit feature file path example
 bash .specify/scripts/bash/load-layer-rules.sh \
-  --source-dir "/Users/me/workspace/app/lib/src/features/home" \
-  --repo-root "/Users/me/workspace/app" \
+  --source-dir "./lib/src/features/home/docs/ARCHITECTURE.md" \
   --write-contract \
   --force-contract \
   --json
@@ -426,7 +432,7 @@ bash .specify/scripts/bash/load-layer-rules.sh \
 Legacy `--feature-dir` form is still supported.
 
 ```bash
-bash .specify/scripts/bash/load-layer-rules.sh --feature-dir "<abs-feature-path>" --repo-root . --json
+bash .specify/scripts/bash/load-layer-rules.sh --feature-dir "<feature-path-or-file>" --json
 ```
 
 `load-layer-rules.sh` is the standard path for policy check/sync:

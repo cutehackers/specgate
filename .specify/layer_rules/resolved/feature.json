@@ -1,7 +1,7 @@
 {
-  "version": 1,
+  "version": "1",
   "kind": "layer_rules",
-  "description": ">",
+  "description": "Default fallback contract for this SpecGate installation. Project teams should override this via docs/ARCHITECTURE.md or .specify/layer_rules/overrides/<feature-id>.yaml before enabling strict mode.\n",
   "naming": {
     "entity": "{Name}Entity",
     "dto": "{Name}Dto",
@@ -15,19 +15,30 @@
   },
   "layer_rules": {
     "domain": {
-      "forbid_import_patterns": []
+      "forbid_import_patterns": [
+        "^package:.*\\/data\\/",
+        "^package:.*\\/presentation\\/"
+      ]
     },
     "data": {
-      "forbid_import_patterns": []
+      "forbid_import_patterns": [
+        "^package:.*\\/presentation\\/"
+      ]
     },
     "presentation": {
-      "forbid_import_patterns": []
+      "forbid_import_patterns": [
+        "^package:.*\\/data\\/.+\\/(dto|datasource|repository_impl)",
+        "^package:.*\\/core\\/.+\\/(dto|entity)"
+      ]
     }
   },
   "errors": {
     "policy": {
       "domain_layer": {
-        "forbid_exceptions": [],
+        "forbid_exceptions": [
+          "StateError",
+          "Exception"
+        ],
         "require_result_type": true
       }
     }

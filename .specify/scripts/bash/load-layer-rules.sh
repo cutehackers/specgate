@@ -15,17 +15,19 @@ WRITE_RESOLVED=true
 usage() {
     cat <<'USAGE'
 Usage: load-layer-rules.sh --source-dir <path> [--feature-id <id>] [--repo-root <path>] [--json]
-  --source-dir <path>       Feature policy source folder
-                           Supports fixed files under this directory only:
+  --source-dir <path>       Feature policy source file or folder (supports relative path)
+                           Supports fixed files under this directory or a direct file:
                            - docs/ARCHITECTURE.md
                            - docs/architecture.md
                            - docs/constitution.md
                            - constitution.md
+                           - any readable file containing parseable policy payload
   Requires Python YAML parser:
   - PyYAML (recommended), or
   - ruamel.yaml
   --feature-dir <path>      Backward-compatible alias for --source-dir
   --feature-id <id>         Override/resolved cache key (feature-id)
+  --repo-root <path>        Repository root used to resolve relative paths (defaults to this repo).
   --write-contract          Write resolved layer policy into .specify/layer_rules/contract.yaml
   --force-contract          Replace existing contract.yaml when writing
   --no-write-resolved       Skip writing .specify/layer_rules/resolved/<feature-id>.json
@@ -109,19 +111,27 @@ if [[ -z "${POLICY_SOURCE_DIR_ARG}" ]]; then
     usage >&2
     exit 1
 fi
-if [[ ! -d "$POLICY_SOURCE_DIR_ARG" ]]; then
-    echo "ERROR: --source-dir must be an existing directory: $POLICY_SOURCE_DIR_ARG" >&2
-    exit 1
-fi
-if [[ -n "$REPO_ROOT_ARG" && ! -d "$REPO_ROOT_ARG" ]]; then
-    echo "ERROR: --repo-root must be an existing directory: $REPO_ROOT_ARG" >&2
-    exit 1
-fi
-
 SCRIPT_DIR="$(CDPATH="" cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="${REPO_ROOT_ARG:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
+REPO_ROOT="${REPO_ROOT_ARG:-$(cd "$SCRIPT_DIR/../../.." && pwd)}"
+if [[ ! -d "$REPO_ROOT" ]]; then
+    echo "ERROR: --repo-root must be an existing directory: $REPO_ROOT" >&2
+    exit 1
+fi
 
-python3 - "$REPO_ROOT" "$POLICY_SOURCE_DIR_ARG" "$FEATURE_ID_ARG" "$WRITE_CONTRACT" "$FORCE_CONTRACT" "$CONTRACT_PATH_ARG" "$WRITE_RESOLVED" <<'PY'
+if [[ "$POLICY_SOURCE_DIR_ARG" = /* ]]; then
+    POLICY_SOURCE_DIR="$POLICY_SOURCE_DIR_ARG"
+else
+    POLICY_SOURCE_DIR="$REPO_ROOT/$POLICY_SOURCE_DIR_ARG"
+fi
+if [[ ! -e "$POLICY_SOURCE_DIR" ]]; then
+    echo "ERROR: --source-dir must be an existing file or directory: $POLICY_SOURCE_DIR_ARG" >&2
+    echo "       (resolved to: $POLICY_SOURCE_DIR)" >&2
+    exit 1
+fi
+REPO_ROOT="$(cd "$REPO_ROOT" && pwd)"
+POLICY_SOURCE_DIR="$(cd "$(dirname "$POLICY_SOURCE_DIR")" && pwd)/$(basename "$POLICY_SOURCE_DIR")"
+
+python3 - "$REPO_ROOT" "$POLICY_SOURCE_DIR" "$FEATURE_ID_ARG" "$WRITE_CONTRACT" "$FORCE_CONTRACT" "$CONTRACT_PATH_ARG" "$WRITE_RESOLVED" <<'PY'
 import json
 import re
 import sys
@@ -744,6 +754,19 @@ def extract_file_name(path: str):
     return Path(path).name
 
 feature_path = policy_source_dir.resolve()
+explicit_source_file = None
+explicit_source_kind = "FEATURE_SOURCE"
+if policy_source_dir.is_file():
+    explicit_source_file = policy_source_dir
+    if policy_source_dir.name in {"ARCHITECTURE.md", "architecture.md"}:
+        explicit_source_kind = "ARCHITECTURE"
+    elif policy_source_dir.name.lower() == "constitution.md":
+        explicit_source_kind = "CONSTITUTION"
+    if policy_source_dir.parent.name == "docs":
+        feature_path = policy_source_dir.parent.parent
+    else:
+        feature_path = policy_source_dir.parent
+
 if requested_feature_id:
     layer_feature_id = normalize_name(requested_feature_id)
 else:
@@ -759,14 +782,19 @@ feature_arch_lower = feature_path / "docs" / "architecture.md"
 feature_cons = feature_path / "docs" / "constitution.md"
 feature_cons_root = feature_path / "constitution.md"
 
-candidate_sources = [
+candidate_sources = []
+if explicit_source_file:
+    candidate_sources.append(
+        (explicit_source_file, explicit_source_kind, "Explicit source file passed as --source-dir")
+    )
+candidate_sources.extend([
     (contract_path, "CONTRACT", "Repository default contract"),
     (override_path, "OVERRIDE", "Feature override in .specify/layer_rules/overrides"),
     (feature_cons, "CONSTITUTION", "Feature constitution"),
     (feature_cons_root, "CONSTITUTION", "Feature constitution"),
     (feature_arch_main, "ARCHITECTURE", "Feature architecture"),
     (feature_arch_lower, "ARCHITECTURE", "Feature architecture"),
-]
+])
 
 policy = {}
 applied_sources = []
